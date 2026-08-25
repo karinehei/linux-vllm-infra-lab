@@ -16,8 +16,9 @@ skip_list:
   - risky-shell-pipe
   - ignore-errors
   - literal-compare
+  # Shared inventory vars by design: app_* (users + vllm), container_runtime (many roles).
+  - var-naming[no-role-prefix]
 warn_list:
   - role-name
-  - var-naming
 mock_modules: []
 mock_roles: []

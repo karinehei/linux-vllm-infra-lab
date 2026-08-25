@@ -95,7 +95,7 @@ else
 fi
 
 section "Disk space"
-DISK_WARN_PERCENT="${DISK_WARN_PERCENT}" run_script disk-status.sh --warn-percent "${DISK_WARN_PERCENT}"
+run_script disk-status.sh --warn-percent "${DISK_WARN_PERCENT}"
 
 section "API / health"
 run_script health-check.sh
