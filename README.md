@@ -264,4 +264,6 @@ docs/           operations, security, testing, runbooks
 
 ## License
 
-To be decided when publishing (for example MIT or Apache-2.0). Add a `LICENSE` file at release time.
+Copyright 2026 Karine Heinonen.
+
+Licensed under the [Apache License, Version 2.0](LICENSE) (see also [`NOTICE`](NOTICE)).
