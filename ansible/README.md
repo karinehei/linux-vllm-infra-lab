@@ -61,6 +61,7 @@ Re-run `site.yml` regularly. Ansible modules converge to the declared state (pac
 
 ## Related docs
 
+- [Control-node setup](../docs/setup.md)
 - [Multi-node administration](../docs/multi-node.md)
 - [NVIDIA guidance](../docs/nvidia.md)
 - [Monitoring](../docs/monitoring.md)

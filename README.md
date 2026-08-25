@@ -98,7 +98,7 @@ Design notes: [`architecture/overview.md`](architecture/overview.md) · multi-no
 
 ## Deployment
 
-Prerequisites: one or more Rocky Linux 9 hosts, SSH from an Ansible control node, NVIDIA stack on AI nodes per [`docs/nvidia.md`](docs/nvidia.md).
+Prerequisites: one or more Rocky Linux 9 hosts, SSH from an Ansible control node, NVIDIA stack on AI nodes per [`docs/nvidia.md`](docs/nvidia.md). Control-node tooling and first converge: [`docs/setup.md`](docs/setup.md).
 
 ```bash
 # Edit inventory: ansible/inventory/hosts.yml (+ group_vars / host_vars)
@@ -249,6 +249,8 @@ docs/           operations, security, testing, runbooks
 
 | Document | Purpose |
 |----------|---------|
+| [`docs/setup.md`](docs/setup.md) | Control-node tooling, inventory, Vault, first converge |
+| [`docs/prerequisites.md`](docs/prerequisites.md) | Host / operator prerequisites |
 | [`hpc/README.md`](hpc/README.md) | Optional laboratory Slurm extension |
 | [`docs/multi-node.md`](docs/multi-node.md) | Central fleet admin + adding a third server |
 | [`docs/monitoring.md`](docs/monitoring.md) | Lightweight Prometheus/Grafana monitoring |
