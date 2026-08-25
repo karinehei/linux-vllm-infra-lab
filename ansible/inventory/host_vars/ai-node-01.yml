@@ -1,0 +1,12 @@
+---
+# Host-specific overrides for ai-node-01 (demonstrate host_vars > group_vars).
+
+common_manage_hostname: true
+common_hostname: ai-node-01
+
+# Example host-specific inference tuning (group default is 4096).
+vllm_max_model_len: 4096
+
+# Address Prometheus on utility-node-01 should use to reach this host.
+# Use a private NIC IP in real labs if vLLM/node_exporter listen there.
+monitoring_scrape_ip: "{{ ansible_host }}"

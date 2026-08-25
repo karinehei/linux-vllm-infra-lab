@@ -1,0 +1,37 @@
+[Unit]
+Description=Prometheus Node Exporter (lab)
+After=network-online.target
+Wants=network-online.target
+{% if container_runtime | default('podman') == 'docker' %}
+After=docker.service
+Requires=docker.service
+{% endif %}
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+{% if container_runtime | default('podman') == 'podman' %}
+ExecStartPre=-/usr/bin/podman rm -f {{ node_exporter_container_name }}
+ExecStart=/usr/bin/podman run --name {{ node_exporter_container_name }} --rm \
+  --network host \
+  --pid host \
+  -v /:/host:ro,rslave \
+  {{ node_exporter_image }} \
+  --path.rootfs=/host \
+  --web.listen-address={{ node_exporter_listen }}:{{ node_exporter_port }}
+ExecStop=/usr/bin/podman stop -t 15 {{ node_exporter_container_name }}
+{% else %}
+ExecStartPre=-/usr/bin/docker rm -f {{ node_exporter_container_name }}
+ExecStart=/usr/bin/docker run --name {{ node_exporter_container_name }} --rm \
+  --network host \
+  --pid host \
+  -v /:/host:ro,rslave \
+  {{ node_exporter_image }} \
+  --path.rootfs=/host \
+  --web.listen-address={{ node_exporter_listen }}:{{ node_exporter_port }}
+ExecStop=/usr/bin/docker stop -t 15 {{ node_exporter_container_name }}
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

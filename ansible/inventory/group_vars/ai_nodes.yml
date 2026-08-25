@@ -1,0 +1,54 @@
+---
+# Group: ai_nodes — GPU inference servers (vLLM).
+
+# Service account + data paths for inference
+app_user: vllm
+app_group: vllm
+app_user_shell: /sbin/nologin
+app_home: /var/lib/vllm
+app_directories:
+  - /var/lib/vllm
+  - /var/lib/vllm/models
+  - /var/lib/vllm/cache
+  - /var/lib/vllm/config
+  - /var/log/vllm
+  - /etc/vllm
+
+# GPU / runtime
+nvidia_install_container_toolkit: true
+nvidia_cuda_repo_enabled: false
+nvidia_require_gpu: false
+node_exporter_enabled: true
+# Allow the utility/monitoring host to scrape node_exporter (edit to match inventory).
+node_exporter_firewall_allow_cidrs:
+  - 192.0.2.20/32
+# For remote Prometheus health scrapes, bind vLLM to a private NIC and allow that CIDR:
+# vllm_host: "192.0.2.10"
+# vllm_firewall_allow_cidrs: ["192.0.2.20/32"]
+
+# Firewall: keep vLLM closed unless CIDRs are set (lab default = localhost bind)
+vllm_firewall_allow_cidrs: []
+
+# vLLM (OpenAI-compatible; override per host in host_vars if needed)
+vllm_model: "Qwen/Qwen2.5-7B-Instruct"
+vllm_port: 8000
+vllm_host: "127.0.0.1"
+vllm_gpu_memory_utilization: 0.90
+vllm_max_model_len: 4096
+vllm_tensor_parallel_size: 1
+vllm_dtype: "auto"
+vllm_container_image: "vllm/vllm-openai:v0.6.3"
+vllm_model_path: /var/lib/vllm/models
+vllm_cache_path: /var/lib/vllm/cache
+vllm_config_dir: /etc/vllm
+vllm_data_dir: /var/lib/vllm
+vllm_log_dir: /var/log/vllm
+vllm_service_enabled: true
+vllm_service_started: false
+vllm_restart: on-failure
+vllm_restart_sec: 15
+vllm_start_limit_interval_sec: 300
+vllm_start_limit_burst: 3
+vllm_require_gpu_preflight: true
+vllm_health_timer_enabled: true
+# vllm_hf_token: "{{ vault_vllm_hf_token }}"

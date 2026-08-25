@@ -1,0 +1,23 @@
+---
+# ansible-lint for this lab — practical rules for Rocky/RHEL roles
+profile: basic
+offline: true
+exclude_paths:
+  - .github/
+  - benchmarks/results/
+  - .venv/
+skip_list:
+  - name[casing]
+  - yaml[line-length]
+  - experimental
+  - no-handler
+  - no-changed-when
+  - command-instead-of-module
+  - risky-shell-pipe
+  - ignore-errors
+  - literal-compare
+warn_list:
+  - role-name
+  - var-naming
+mock_modules: []
+mock_roles: []

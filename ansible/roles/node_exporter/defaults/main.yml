@@ -1,0 +1,10 @@
+---
+# Role: node_exporter — host metrics for centralized Prometheus scrapes.
+
+node_exporter_enabled: false
+node_exporter_image: "quay.io/prometheus/node-exporter:v1.8.2"
+node_exporter_container_name: node-exporter
+node_exporter_port: 9100
+# Bind address for the exporter. Use a private NIC for multi-node scrapes.
+node_exporter_listen: "0.0.0.0"
+node_exporter_firewall_allow_cidrs: []

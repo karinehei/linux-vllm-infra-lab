@@ -1,0 +1,16 @@
+---
+- name: Mark NVIDIA driver reboot as required
+  ansible.builtin.copy:
+    content: |
+      NVIDIA driver packages were installed or updated by Ansible.
+      Reboot this host, confirm nvidia-smi, then remove this file or re-run the playbook.
+    dest: /var/lib/nvidia-driver-reboot-required
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Restart docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: container_runtime | default('podman') == 'docker'

@@ -1,0 +1,84 @@
+---
+name: Static CI
+
+# Hosted runners: lint, syntax, unit tests, config validation only.
+# No GPU, no live vLLM, no model download — see docs/testing.md.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: static-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Install Python CI tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: YAML lint (yamllint)
+        run: yamllint -c .yamllint.yml ansible containers .github/workflows .yamllint.yml .ansible-lint
+
+      - name: Ansible syntax check
+        run: |
+          ansible-playbook --syntax-check \
+            -i ansible/inventory/hosts.yml \
+            ansible/playbooks/site.yml
+          ansible-playbook --syntax-check \
+            -i ansible/inventory/hosts.yml \
+            ansible/playbooks/ai-server.yml
+          ansible-playbook --syntax-check \
+            -i ansible/inventory/hosts.yml \
+            ansible/playbooks/monitoring.yml
+
+      - name: ansible-lint
+        run: ansible-lint -c .ansible-lint ansible/playbooks ansible/roles
+
+      - name: Ruff (Python lint)
+        run: ruff check scripts benchmarks tests
+
+      - name: ShellCheck (Bash)
+        run: |
+          shellcheck --version
+          shellcheck \
+            scripts/health-check.sh \
+            scripts/gpu-status.sh \
+            scripts/service-status.sh \
+            scripts/disk-status.sh \
+            scripts/diagnose.sh \
+            scripts/health/check_vllm_api.sh \
+            tests/integration/run_on_gpu_host.sh
+
+      - name: Pytest unit + config validation
+        run: pytest tests/unit -v
+
+      - name: Summarize CI scope
+        run: |
+          cat <<'EOF'
+          Static CI completed (no GPU required).
+          GPU/integration/benchmark tests are NOT run here — see docs/testing.md
+          and workflow "Integration GPU (manual)".
+          EOF

@@ -1,0 +1,57 @@
+---
+name: Integration GPU (manual)
+
+# Not triggered on push/PR.
+# GitHub-hosted runners have no NVIDIA GPU, drivers, or lab model weights.
+# See docs/testing.md for why GPU tests stay off normal CI.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notice:
+    name: GPU integration is host-side
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for docs only)
+        uses: actions/checkout@v4
+
+      - name: Explain separation from Static CI
+        run: |
+          cat <<'EOF'
+          ============================================================
+          Why GPU / vLLM tests are not on normal hosted CI
+          ============================================================
+          1. ubuntu-latest has no NVIDIA GPU or CUDA driver stack
+          2. Model weights are large; downloading on every PR is costly
+             and can leak gated-model tokens into CI logs if misconfigured
+          3. Latency/throughput numbers are hardware-specific — not a
+             reliable merge gate for Ansible/script changes
+          4. A failing inference job would block unrelated infra PRs
+
+          Static CI (workflow "Static CI") already covers:
+            - yamllint / YAML parse checks
+            - ansible-playbook --syntax-check
+            - ansible-lint
+            - Ruff
+            - ShellCheck
+            - pytest unit + configuration validation
+
+          Run live checks on the Rocky Linux GPU host instead:
+
+            export VLLM_BASE_URL=http://127.0.0.1:8000
+            ./scripts/gpu-status.sh
+            ./scripts/health-check.sh
+            ./tests/integration/run_on_gpu_host.sh
+
+          Optional tiny benchmark (still on the GPU host):
+
+            python3 benchmarks/benchmark_vllm.py \
+              --url "$VLLM_BASE_URL" --requests 2 --concurrency 1 --max-tokens 16
+
+          When you have a self-hosted runner with labels
+          [self-hosted, linux, gpu], add a job in this workflow that
+          runs ./tests/integration/run_on_gpu_host.sh on that runner.
+          ============================================================
+          EOF
+          test -f docs/testing.md

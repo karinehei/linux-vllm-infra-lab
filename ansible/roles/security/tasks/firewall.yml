@@ -1,0 +1,61 @@
+---
+- name: Ensure firewalld is installed
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+
+- name: Ensure firewalld is enabled and started
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Query whether SSH service is already allowed
+  ansible.builtin.command: firewall-cmd --permanent --query-service=ssh
+  register: security_fw_ssh_query
+  changed_when: false
+  failed_when: false
+
+- name: Allow SSH through firewall (permanent)
+  ansible.builtin.command: firewall-cmd --permanent --add-service=ssh
+  when: security_fw_ssh_query.rc != 0
+  notify: Reload firewalld
+
+# Note: rich rules are additive. Removing a CIDR from the variable list does not
+# delete an existing firewalld rule — review with `firewall-cmd --list-rich-rules`.
+- name: Add optional SSH source CIDR rich rules
+  ansible.builtin.command: >-
+    firewall-cmd --permanent --add-rich-rule='rule family="ipv4"
+    source address="{{ item }}" service name="ssh" accept'
+  loop: "{{ security_ssh_allow_cidrs }}"
+  register: security_fw_ssh_cidr
+  changed_when: >-
+    security_fw_ssh_cidr.rc == 0 and
+    ('already' not in (security_fw_ssh_cidr.stdout | default('') | lower)) and
+    ('already' not in (security_fw_ssh_cidr.stderr | default('') | lower))
+  failed_when: >-
+    security_fw_ssh_cidr.rc != 0 and
+    ('already' not in (security_fw_ssh_cidr.stdout | default('') | lower)) and
+    ('already' not in (security_fw_ssh_cidr.stderr | default('') | lower))
+  notify: Reload firewalld
+  when: security_ssh_allow_cidrs | length > 0
+
+- name: Open vLLM port for trusted CIDRs only
+  ansible.builtin.command: >-
+    firewall-cmd --permanent --add-rich-rule='rule family="ipv4"
+    source address="{{ item }}" port port="{{ vllm_port }}" protocol="tcp" accept'
+  loop: "{{ vllm_firewall_allow_cidrs | default([]) }}"
+  register: security_fw_vllm
+  changed_when: >-
+    security_fw_vllm.rc == 0 and
+    ('already' not in (security_fw_vllm.stdout | default('') | lower)) and
+    ('already' not in (security_fw_vllm.stderr | default('') | lower))
+  failed_when: >-
+    security_fw_vllm.rc != 0 and
+    ('already' not in (security_fw_vllm.stdout | default('') | lower)) and
+    ('already' not in (security_fw_vllm.stderr | default('') | lower))
+  notify: Reload firewalld
+  when:
+    - vllm_firewall_allow_cidrs is defined
+    - vllm_firewall_allow_cidrs | length > 0
+    - vllm_port is defined

@@ -1,0 +1,57 @@
+---
+# Example Prometheus config for a single Rocky Linux GPU inference host.
+# Adjust targets if exporters or vLLM run on another address.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+        labels:
+          host: ai-node-01
+          role: inference
+
+  - job_name: dcgm
+    static_configs:
+      - targets: ["127.0.0.1:9400"]
+        labels:
+          host: ai-node-01
+          role: gpu
+
+  # vLLM exposes Prometheus metrics at /metrics on many builds.
+  # If scrape fails, availability still comes from the blackbox job below.
+  - job_name: vllm
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:8000"]
+        labels:
+          host: ai-node-01
+          service: vllm
+
+  - job_name: vllm_health
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://127.0.0.1:8000/health
+        labels:
+          host: ai-node-01
+          service: vllm
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115

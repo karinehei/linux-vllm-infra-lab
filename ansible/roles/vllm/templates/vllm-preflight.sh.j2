@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Managed by Ansible — fail fast before starting the vLLM container.
+# Exit codes are intentional so systemctl status / journalctl show a clear cause.
+set -euo pipefail
+
+log() { echo "vllm-preflight: $*"; }
+fail() { log "ERROR: $*"; exit 1; }
+
+RUNTIME="{{ container_runtime | default('podman') }}"
+REQUIRE_GPU="{{ vllm_require_gpu_preflight | bool | lower }}"
+MODEL_PATH="{{ vllm_model_path }}"
+CACHE_PATH="{{ vllm_cache_path }}"
+
+case "${RUNTIME}" in
+  podman)
+    command -v podman >/dev/null 2>&1 || fail "podman not found in PATH"
+    ;;
+  docker)
+    command -v docker >/dev/null 2>&1 || fail "docker not found in PATH"
+    docker info >/dev/null 2>&1 || fail "docker daemon not reachable"
+    ;;
+  *)
+    fail "unsupported container_runtime=${RUNTIME}"
+    ;;
+esac
+
+[[ -d "${MODEL_PATH}" ]] || fail "model path missing: ${MODEL_PATH}"
+[[ -d "${CACHE_PATH}" ]] || fail "cache path missing: ${CACHE_PATH}"
+
+if [[ "${REQUIRE_GPU}" == "true" ]]; then
+  command -v nvidia-smi >/dev/null 2>&1 || fail "nvidia-smi not found (drivers missing?)"
+  if ! nvidia-smi >/dev/null 2>&1; then
+    fail "nvidia-smi failed — GPU unavailable or driver not loaded"
+  fi
+  log "GPU OK ($(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -n1))"
+else
+  log "GPU preflight skipped (vllm_require_gpu_preflight=false)"
+fi
+
+log "OK (runtime=${RUNTIME})"
+exit 0

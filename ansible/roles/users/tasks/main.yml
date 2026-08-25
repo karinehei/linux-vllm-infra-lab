@@ -1,0 +1,30 @@
+---
+- name: Ensure application group exists
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    gid: "{{ app_group_gid if app_group_gid is not none else omit }}"
+    system: true
+    state: present
+
+- name: Ensure application user exists
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    groups: "{{ (app_user_groups | length > 0) | ternary(app_user_groups, omit) }}"
+    append: true
+    uid: "{{ app_user_uid if app_user_uid is not none else omit }}"
+    shell: "{{ app_user_shell }}"
+    home: "{{ app_home }}"
+    create_home: "{{ app_create_home }}"
+    system: true
+    state: present
+    comment: "vLLM inference service account"
+
+- name: Ensure application directories exist with least-privilege ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+  loop: "{{ app_directories }}"

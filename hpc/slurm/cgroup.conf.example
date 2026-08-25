@@ -1,0 +1,9 @@
+# Optional cgroup containment for a lab cluster.
+# Enable only when ProctrackType/TaskPlugin match your Slurm build.
+# Misconfigured cgroups are a common source of slurmd failures — leave unused
+# until basic sbatch works without cgroups.
+
+CgroupMountpoint=/sys/fs/cgroup
+ConstrainCores=yes
+ConstrainRAMSpace=yes
+ConstrainDevices=yes

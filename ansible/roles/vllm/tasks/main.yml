@@ -1,0 +1,112 @@
+---
+- name: Ensure vLLM directories exist (config, models, persistent cache, logs)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ app_user | default('vllm') }}"
+    group: "{{ app_group | default('vllm') }}"
+    mode: "{{ item.mode | default('0750') }}"
+  loop:
+    - { path: "{{ vllm_config_dir }}" }
+    - { path: "{{ vllm_data_dir }}" }
+    - { path: "{{ vllm_model_path }}" }
+    - { path: "{{ vllm_cache_path }}" }
+    - { path: "{{ vllm_cache_path }}/transformers" }
+    - { path: "{{ vllm_cache_path }}/vllm" }
+    - { path: "{{ vllm_log_dir }}" }
+
+- name: Warn if API bind looks publicly exposed
+  ansible.builtin.debug:
+    msg: >-
+      vllm_host is '{{ vllm_host }}'. Binding 0.0.0.0 publishes on all interfaces.
+      Prefer 127.0.0.1 or a private NIC, and set vllm_firewall_allow_cidrs when opening
+      the port beyond localhost.
+  when: vllm_host in ["0.0.0.0", "::", "*"]
+
+- name: Deploy vLLM environment file
+  ansible.builtin.template:
+    src: vllm.env.j2
+    dest: "{{ vllm_env_file }}"
+    owner: root
+    group: "{{ app_group | default('vllm') }}"
+    mode: "0640"
+  notify: Restart vllm
+
+- name: Deploy vLLM config JSON
+  ansible.builtin.template:
+    src: vllm.json.j2
+    dest: "{{ vllm_config_dir }}/vllm.json"
+    owner: "{{ app_user | default('vllm') }}"
+    group: "{{ app_group | default('vllm') }}"
+    mode: "0640"
+  notify: Restart vllm
+
+- name: Deploy vLLM health check script
+  ansible.builtin.template:
+    src: check-vllm-health.sh.j2
+    dest: "{{ vllm_health_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy vLLM preflight script (GPU/runtime checks before start)
+  ansible.builtin.template:
+    src: vllm-preflight.sh.j2
+    dest: "{{ vllm_preflight_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy systemd unit for vLLM
+  ansible.builtin.template:
+    src: vllm.service.j2
+    dest: "{{ vllm_unit_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart vllm
+
+- name: Deploy vLLM health oneshot unit
+  ansible.builtin.template:
+    src: vllm-health.service.j2
+    dest: /etc/systemd/system/vllm-health.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+  when: vllm_health_timer_enabled | bool
+
+- name: Deploy vLLM health timer
+  ansible.builtin.template:
+    src: vllm-health.timer.j2
+    dest: /etc/systemd/system/vllm-health.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+  when: vllm_health_timer_enabled | bool
+
+- name: Enable and optionally start vLLM service
+  ansible.builtin.systemd:
+    name: "{{ vllm_service_name }}"
+    enabled: "{{ vllm_service_enabled }}"
+    state: "{{ 'started' if vllm_service_started else 'stopped' }}"
+    daemon_reload: true
+
+- name: Enable vLLM health timer
+  ansible.builtin.systemd:
+    name: vllm-health.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: vllm_health_timer_enabled | bool
+
+- name: Summarize vLLM endpoint
+  ansible.builtin.debug:
+    msg: >-
+      OpenAI-compatible API configured at http://{{ vllm_host }}:{{ vllm_port }}
+      (model={{ vllm_model }}, cache={{ vllm_cache_path }}).
+      Test: python3 scripts/test-inference.py --base-url http://{{ vllm_host }}:{{ vllm_port }}
+      Health: {{ vllm_health_script }}

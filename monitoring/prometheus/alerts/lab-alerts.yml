@@ -1,0 +1,100 @@
+---
+# Lab alert rules — keep the set small and actionable.
+# Load via prometheus.yml rule_files.
+#
+# Alertmanager is optional for a portfolio lab; evaluate rules in Prometheus UI
+# (Status → Rules / Alerts) or wire a single Alertmanager later.
+
+groups:
+  - name: lab-inference
+    rules:
+      # --- Inference service unavailable ---
+      # Detects: blackbox probe to vLLM /health is failing (probe_success == 0).
+      # Why it matters: researchers and automation cannot call the OpenAI-compatible
+      # API; usually means the systemd unit crashed, model failed to load, or the
+      # process is listening on the wrong address/port.
+      - alert: InferenceServiceUnavailable
+        expr: probe_success{service="vllm"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "vLLM health probe failing on {{ $labels.host }}"
+          description: >-
+            Blackbox probe against the inference /health endpoint has been
+            unsuccessful for 2 minutes. Check: systemctl status vllm;
+            journalctl -u vllm; ./scripts/health-check.sh
+
+      # Fallback if blackbox is down but the metrics scrape target exists.
+      - alert: InferenceMetricsTargetDown
+        expr: up{job="vllm"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus cannot scrape vLLM /metrics on {{ $labels.host }}"
+          description: >-
+            The vLLM metrics job is down. The API might still work if /metrics
+            is disabled; verify with curl /health and /v1/models. If both fail,
+            treat as service outage.
+
+      # --- GPU memory near exhaustion ---
+      # Detects: frame-buffer used / (used+free) > 90% (DCGM exporter).
+      # Why it matters: additional context or concurrent requests often trigger
+      # CUDA OOM, failed jobs, or thrashing. Act before hard failures.
+      - alert: GpuMemoryNearExhaustion
+        expr: |
+          (
+            DCGM_FI_DEV_FB_USED
+            /
+            (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE)
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU frame buffer >90% used on {{ $labels.gpu }}"
+          description: >-
+            GPU memory pressure is high for 5 minutes. Consider lowering
+            vllm_max_model_len / concurrency, or using a smaller model
+            (see docs/vllm.md).
+
+      # --- Disk space low ---
+      # Detects: root (or other non-tmp) filesystem has <15% free.
+      # Why it matters: model cache growth, container layers, and journals fill
+      # disks quietly; when full, pulls and logging fail and recovery is harder.
+      - alert: DiskSpaceLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay",mountpoint="/"}
+            /
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay",mountpoint="/"}
+          ) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Root filesystem below 15% free on {{ $labels.instance }}"
+          description: >-
+            Less than 15% disk free on /. Check /var/lib/vllm/cache and
+            container storage. Run ./scripts/disk-status.sh.
+
+      # --- Host memory high ---
+      # Detects: (1 - MemAvailable/MemTotal) > 90%.
+      # Why it matters: host RAM pressure causes OOM kills of unrelated services
+      # (sshd, exporters) and unstable inference even when GPU memory looks fine.
+      - alert: HostMemoryHigh
+        expr: |
+          (
+            1
+            -
+            (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory usage >90% on {{ $labels.instance }}"
+          description: >-
+            Available memory is critically low for 5 minutes. Inspect processes
+            competing with the inference stack; reduce concurrency or model size.

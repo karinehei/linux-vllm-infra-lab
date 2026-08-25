@@ -1,0 +1,21 @@
+---
+- name: Include SSH hardening tasks
+  ansible.builtin.include_tasks: ssh.yml
+  when: security_ssh_hardening | bool
+
+- name: Include firewall tasks
+  ansible.builtin.include_tasks: firewall.yml
+  when: security_firewall_enabled | bool
+
+- name: Report SELinux status (do not disable)
+  ansible.builtin.command: getenforce
+  register: security_getenforce
+  changed_when: false
+  failed_when: false
+
+- name: Warn if SELinux is not enforcing
+  ansible.builtin.debug:
+    msg: >-
+      SELinux is '{{ security_getenforce.stdout | default('unknown') }}'.
+      This lab prefers '{{ security_selinux_mode }}'; do not disable SELinux to "fix" GPU issues.
+  when: security_getenforce.stdout | default('') | lower != 'enforcing'

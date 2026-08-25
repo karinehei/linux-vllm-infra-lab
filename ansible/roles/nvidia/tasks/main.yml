@@ -1,0 +1,55 @@
+---
+- name: Detect NVIDIA PCI devices
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci -nn | grep -iE 'VGA|3D|Display' | grep -i nvidia || true
+  args:
+    executable: /bin/bash
+  register: nvidia_lspci
+  changed_when: false
+
+- name: Check for nvidia-smi on the host
+  ansible.builtin.command: nvidia-smi
+  register: nvidia_smi
+  changed_when: false
+  failed_when: false
+
+- name: Set NVIDIA detection facts
+  ansible.builtin.set_fact:
+    nvidia_gpu_detected: "{{ (nvidia_lspci.stdout | trim | length) > 0 }}"
+    nvidia_driver_present: "{{ nvidia_smi.rc == 0 }}"
+
+- name: Summarize NVIDIA prerequisites
+  ansible.builtin.debug:
+    msg:
+      - "GPU PCI devices detected: {{ nvidia_gpu_detected }}"
+      - "nvidia-smi usable: {{ nvidia_driver_present }}"
+      - "Install drivers via Ansible: {{ nvidia_install_drivers }}"
+      - "Install NVIDIA Container Toolkit: {{ nvidia_install_container_toolkit }}"
+      - >-
+        If drivers are missing, install them manually (or set
+        nvidia_install_drivers: true after reading docs/nvidia.md),
+        reboot, confirm nvidia-smi, then re-run this playbook.
+
+- name: Fail when a GPU is required but not detected
+  ansible.builtin.assert:
+    that:
+      - nvidia_gpu_detected | bool
+    fail_msg: >-
+      nvidia_require_gpu is true but no NVIDIA PCI device was found.
+      Check lspci, passthrough, and firmware.
+  when: nvidia_require_gpu | bool
+
+- name: Optionally install NVIDIA drivers
+  ansible.builtin.include_tasks: drivers.yml
+  when: nvidia_install_drivers | bool
+
+- name: Install NVIDIA Container Toolkit when requested
+  ansible.builtin.include_tasks: toolkit.yml
+  when: nvidia_install_container_toolkit | bool
+
+- name: Configure container runtime for NVIDIA
+  ansible.builtin.include_tasks: runtime_hook.yml
+  when:
+    - nvidia_install_container_toolkit | bool
+    - nvidia_driver_present | bool or nvidia_install_drivers | bool

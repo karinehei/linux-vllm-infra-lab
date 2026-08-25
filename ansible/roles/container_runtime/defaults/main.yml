@@ -1,0 +1,31 @@
+---
+# Role: container_runtime
+#
+# Default: podman — available in Rocky/RHEL 9 AppStream, daemonless,
+# integrates cleanly with systemd, and aligns with RHEL container guidance.
+# Set container_runtime: docker when an existing lab standard requires the
+# Docker Engine API / Compose v2 ecosystem.
+
+container_runtime: podman
+
+container_runtime_podman_packages:
+  - podman
+  - buildah
+  - skopeo
+  - containernetworking-plugins
+
+# Docker CE on Rocky 9 via Docker's official repo (not enabled unless selected).
+container_runtime_docker_edition: ce
+container_runtime_docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+container_runtime_docker_repo_url: >-
+  https://download.docker.com/linux/centos/docker-ce.repo
+
+# Enable lingering so rootless Podman user services can run at boot (optional).
+container_runtime_podman_enable_lingering: false
+container_runtime_podman_linger_user: "{{ app_user | default('vllm') }}"

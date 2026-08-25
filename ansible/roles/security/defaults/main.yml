@@ -1,0 +1,27 @@
+---
+# Role: security — SSH hardening, firewall, least privilege
+# SSH changes use drop-in files + sshd -t validation to avoid lockout.
+
+security_firewall_enabled: true
+security_ssh_hardening: true
+
+# Always keep SSH open. Optional extra source CIDRs for SSH.
+security_ssh_port: 22
+security_ssh_allow_cidrs: []
+
+# If empty, ansible_user is included automatically when hardening AllowUsers.
+security_ssh_allow_users: []
+security_ssh_permit_root_login: "prohibit-password"
+security_ssh_password_authentication: false
+security_ssh_pubkey_authentication: true
+security_ssh_x11_forwarding: false
+security_ssh_max_auth_tries: 4
+security_ssh_client_alive_interval: 300
+security_ssh_client_alive_count_max: 2
+security_ssh_allow_tcp_forwarding: true
+
+# Fail closed on PasswordAuthentication only after confirming key-based access.
+security_ssh_require_admin_key: true
+
+# SELinux: never disable; report state only
+security_selinux_mode: enforcing

@@ -1,0 +1,16 @@
+# Thin lab wrapper around the official vLLM OpenAI-compatible server image.
+# Prefer pinning a digest in group_vars for demos (see containers/vllm/README.md).
+
+ARG VLLM_BASE_IMAGE=vllm/vllm-openai:v0.6.3
+FROM ${VLLM_BASE_IMAGE}
+
+# OpenAI-compatible HTTP API (mapped to host bind address by runtime)
+EXPOSE 8000
+
+# vLLM serves /health and /v1/* once the engine is ready.
+# Long start-period: model load can take minutes on first run.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=5 \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+
+# Upstream ENTRYPOINT already launches the OpenAI API server.
+# Pass model and engine flags at runtime (compose / systemd / Ansible).

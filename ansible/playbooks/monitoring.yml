@@ -1,0 +1,34 @@
+---
+# Convenience playbook: monitoring/utility hosts only.
+#
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/monitoring.yml
+
+- name: Provision monitoring utility servers
+  hosts: monitoring_nodes
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require Rocky Linux / RHEL 9 family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+          - ansible_distribution_major_version | int == 9
+          - ansible_distribution in ["Rocky", "RedHat", "AlmaLinux", "CentOS", "OracleLinux"]
+        fail_msg: >-
+          This playbook targets Rocky Linux 9 / RHEL 9-compatible systems.
+          Found {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+  roles:
+    - role: common
+      tags: [common, bootstrap]
+    - role: security
+      tags: [security]
+    - role: container_runtime
+      tags: [containers, runtime]
+    - role: node_exporter
+      tags: [monitoring, exporters]
+      when: node_exporter_enabled | default(false) | bool
+    - role: monitoring
+      tags: [monitoring]
+      when: monitoring_enabled | default(false) | bool

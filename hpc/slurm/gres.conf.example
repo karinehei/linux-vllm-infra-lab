@@ -1,0 +1,8 @@
+# GPU GRES mapping for laboratory node gpu01.
+# Install as gres.conf on hosts that advertise GPUs (at least gpu01).
+# File is typically ignored on CPU-only nodes.
+#
+# Confirm device indices with: nvidia-smi -L
+# AutoDetect=nvml is available on some Slurm builds; explicit File= is clearer for labs.
+
+NodeName=gpu01 Name=gpu File=/dev/nvidia0

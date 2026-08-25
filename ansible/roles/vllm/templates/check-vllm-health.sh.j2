@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Managed by Ansible — probe vLLM OpenAI-compatible readiness.
+set -euo pipefail
+
+BASE_URL="${VLLM_HEALTH_URL:-http://{{ vllm_host }}:{{ vllm_port }}}"
+TIMEOUT="{{ vllm_health_timeout_sec }}"
+WAIT_SECONDS=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --wait)
+      WAIT_SECONDS="${2:-0}"
+      shift 2
+      ;;
+    --url)
+      BASE_URL="${2:?}"
+      shift 2
+      ;;
+    -h|--help)
+      echo "Usage: $(basename "$0") [--wait SECONDS] [--url URL]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+deadline=$((SECONDS + WAIT_SECONDS))
+
+check_once() {
+  curl -fsS --max-time "${TIMEOUT}" "${BASE_URL}/health" >/dev/null 2>&1 \
+    || curl -fsS --max-time "${TIMEOUT}" "${BASE_URL}/v1/models" >/dev/null 2>&1
+}
+
+if (( WAIT_SECONDS > 0 )); then
+  until check_once; do
+    if (( SECONDS >= deadline )); then
+      echo "ERROR: vLLM not healthy at ${BASE_URL} within ${WAIT_SECONDS}s"
+      exit 1
+    fi
+    sleep 2
+  done
+  echo "OK: vLLM healthy at ${BASE_URL}"
+  exit 0
+fi
+
+if check_once; then
+  echo "OK: vLLM healthy at ${BASE_URL}"
+  exit 0
+fi
+
+echo "ERROR: vLLM not healthy at ${BASE_URL}"
+exit 1

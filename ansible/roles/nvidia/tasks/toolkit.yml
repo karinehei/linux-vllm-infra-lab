@@ -1,0 +1,14 @@
+---
+- name: Install NVIDIA Container Toolkit repository file
+  ansible.builtin.get_url:
+    url: "{{ nvidia_container_toolkit_repo_url }}"
+    dest: "{{ nvidia_container_toolkit_repo_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install NVIDIA Container Toolkit packages
+  ansible.builtin.dnf:
+    name: "{{ nvidia_container_toolkit_packages }}"
+    state: present
+    update_cache: true

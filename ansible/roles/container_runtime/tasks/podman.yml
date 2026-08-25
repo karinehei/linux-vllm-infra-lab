@@ -1,0 +1,22 @@
+---
+- name: Install Podman and related tools
+  ansible.builtin.dnf:
+    name: "{{ container_runtime_podman_packages }}"
+    state: present
+    update_cache: true
+
+- name: Verify podman is callable
+  ansible.builtin.command: podman --version
+  register: container_runtime_podman_version
+  changed_when: false
+
+- name: Display Podman version
+  ansible.builtin.debug:
+    msg: "{{ container_runtime_podman_version.stdout }}"
+
+- name: Enable lingering for rootless Podman user services
+  ansible.builtin.command: loginctl enable-linger {{ container_runtime_podman_linger_user }}
+  register: container_runtime_linger
+  changed_when: container_runtime_linger.rc == 0
+  failed_when: false
+  when: container_runtime_podman_enable_lingering | bool

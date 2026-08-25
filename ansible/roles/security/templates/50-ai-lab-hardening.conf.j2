@@ -1,0 +1,18 @@
+# Managed by Ansible (role: security). Do not edit by hand.
+# Drop-in keeps base sshd_config intact and is validated with sshd -t.
+
+{% if security_ssh_allow_users_effective | length > 0 %}
+AllowUsers {{ security_ssh_allow_users_effective | join(' ') }}
+{% endif %}
+PermitRootLogin {{ security_ssh_permit_root_login }}
+PubkeyAuthentication {{ 'yes' if security_ssh_pubkey_authentication else 'no' }}
+PasswordAuthentication {{ 'yes' if security_ssh_password_authentication else 'no' }}
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+X11Forwarding {{ 'yes' if security_ssh_x11_forwarding else 'no' }}
+PermitEmptyPasswords no
+MaxAuthTries {{ security_ssh_max_auth_tries }}
+ClientAliveInterval {{ security_ssh_client_alive_interval }}
+ClientAliveCountMax {{ security_ssh_client_alive_count_max }}
+AllowTcpForwarding {{ 'yes' if security_ssh_allow_tcp_forwarding else 'no' }}
+Protocol 2

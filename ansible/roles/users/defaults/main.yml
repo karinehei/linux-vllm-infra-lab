@@ -1,0 +1,22 @@
+---
+# Role: users — application/service account and directories
+
+app_user: vllm
+app_group: vllm
+app_user_uid: null
+app_group_gid: null
+app_user_shell: /sbin/nologin
+app_home: /var/lib/vllm
+app_create_home: true
+
+app_directories:
+  - /var/lib/vllm
+  - /var/lib/vllm/models
+  - /var/lib/vllm/config
+  - /var/log/vllm
+  - /etc/vllm
+
+# Extra groups for GPU/container access (populated when devices/groups exist)
+app_user_groups: []
+app_user_append_groups:
+  - "{{ app_group }}"

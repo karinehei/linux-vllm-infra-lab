@@ -1,0 +1,59 @@
+---
+- name: Configure Podman for NVIDIA CDI/runtime
+  when: container_runtime | default('podman') == 'podman'
+  block:
+    - name: Ensure CDI directory exists
+      ansible.builtin.file:
+        path: /etc/cdi
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Generate NVIDIA CDI spec to a temporary file
+      ansible.builtin.command: nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml.ansible-tmp
+      register: nvidia_cdi
+      changed_when: false
+      failed_when: false
+
+    - name: Install CDI spec when generation succeeded
+      ansible.builtin.copy:
+        src: /etc/cdi/nvidia.yaml.ansible-tmp
+        dest: /etc/cdi/nvidia.yaml
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      when: nvidia_cdi.rc == 0
+
+    - name: Remove temporary CDI file
+      ansible.builtin.file:
+        path: /etc/cdi/nvidia.yaml.ansible-tmp
+        state: absent
+      when: nvidia_cdi.rc == 0
+
+    - name: Warn when CDI generation failed
+      ansible.builtin.debug:
+        msg: >-
+          nvidia-ctk cdi generate failed (rc={{ nvidia_cdi.rc }}).
+          Confirm drivers with nvidia-smi, then re-run the nvidia role.
+      when: nvidia_cdi.rc != 0
+
+- name: Configure Docker NVIDIA runtime
+  when: container_runtime | default('podman') == 'docker'
+  block:
+    - name: Register NVIDIA runtime with Docker
+      ansible.builtin.command: nvidia-ctk runtime configure --runtime=docker
+      register: nvidia_docker_runtime
+      changed_when: >-
+        nvidia_docker_runtime.rc == 0 and
+        ('already' not in (nvidia_docker_runtime.stdout | default('') | lower))
+      failed_when: false
+      notify: Restart docker
+
+    - name: Warn when Docker NVIDIA runtime configure failed
+      ansible.builtin.debug:
+        msg: >-
+          nvidia-ctk runtime configure failed (rc={{ nvidia_docker_runtime.rc }}).
+          Re-run after drivers are healthy.
+      when: nvidia_docker_runtime.rc != 0

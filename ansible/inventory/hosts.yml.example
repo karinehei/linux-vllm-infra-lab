@@ -1,0 +1,16 @@
+# Example inventory — copy values into hosts.yml for your lab.
+# Groups drive which roles each server receives (see playbooks/site.yml).
+
+all:
+  children:
+    ai_nodes:
+      hosts:
+        ai-node-01:
+          ansible_host: 192.0.2.10
+          ansible_user: rocky
+
+    monitoring_nodes:
+      hosts:
+        utility-node-01:
+          ansible_host: 192.0.2.20
+          ansible_user: rocky

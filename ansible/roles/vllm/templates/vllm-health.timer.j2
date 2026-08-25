@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic vLLM API health check
+Requires=vllm-health.service
+
+[Timer]
+OnBootSec={{ vllm_health_timer_on_boot_sec }}
+OnUnitActiveSec={{ vllm_health_timer_on_unit_active_sec }}
+AccuracySec=15s
+Unit=vllm-health.service
+
+[Install]
+WantedBy=timers.target

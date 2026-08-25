@@ -1,0 +1,15 @@
+{
+  "openai_compatible": true,
+  "api_base": "http://{{ vllm_host }}:{{ vllm_port }}/v1",
+  "model": "{{ vllm_model }}",
+  "host": "{{ vllm_host }}",
+  "port": {{ vllm_port | int }},
+  "gpu_memory_utilization": {{ vllm_gpu_memory_utilization }},
+  "max_model_len": {{ vllm_max_model_len | int }},
+  "tensor_parallel_size": {{ vllm_tensor_parallel_size | int }},
+  "dtype": "{{ vllm_dtype }}",
+  "container_image": "{{ vllm_container_image }}",
+  "model_path": "{{ vllm_model_path }}",
+  "cache_path": "{{ vllm_cache_path }}",
+  "extra_args": {{ vllm_extra_args | to_nice_json }}
+}

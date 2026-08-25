@@ -1,0 +1,60 @@
+---
+# Central site playbook — all managed Linux hosts from one control node.
+#
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/site.yml
+#
+# Limit examples:
+#   --limit ai_nodes
+#   --limit monitoring_nodes
+#   --limit ai-node-01
+
+- name: Baseline every managed host
+  hosts: all
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Require Rocky Linux / RHEL 9 family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+          - ansible_distribution_major_version | int == 9
+          - ansible_distribution in ["Rocky", "RedHat", "AlmaLinux", "CentOS", "OracleLinux"]
+        fail_msg: >-
+          This playbook targets Rocky Linux 9 / RHEL 9-compatible systems.
+          Found {{ ansible_distribution }} {{ ansible_distribution_version }}.
+  roles:
+    - role: common
+      tags: [common, bootstrap]
+    - role: security
+      tags: [security]
+
+- name: Deploy AI inference nodes
+  hosts: ai_nodes
+  become: true
+  gather_facts: true
+  roles:
+    - role: users
+      tags: [users]
+    - role: container_runtime
+      tags: [containers, runtime]
+    - role: nvidia
+      tags: [nvidia, gpu]
+    - role: vllm
+      tags: [vllm, inference]
+    - role: node_exporter
+      tags: [monitoring, exporters]
+      when: node_exporter_enabled | default(false) | bool
+
+- name: Deploy monitoring / utility nodes
+  hosts: monitoring_nodes
+  become: true
+  gather_facts: true
+  roles:
+    - role: container_runtime
+      tags: [containers, runtime]
+    - role: node_exporter
+      tags: [monitoring, exporters]
+      when: node_exporter_enabled | default(false) | bool
+    - role: monitoring
+      tags: [monitoring]
+      when: monitoring_enabled | default(false) | bool

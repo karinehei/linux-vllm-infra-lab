@@ -1,0 +1,53 @@
+---
+# Role: vllm — OpenAI-compatible inference (single-GPU oriented).
+
+vllm_model: "Qwen/Qwen2.5-7B-Instruct"
+vllm_port: 8000
+vllm_host: "127.0.0.1"
+vllm_gpu_memory_utilization: 0.90
+vllm_max_model_len: 4096
+vllm_tensor_parallel_size: 1
+vllm_dtype: "auto"
+vllm_container_image: "vllm/vllm-openai:v0.6.3"
+
+vllm_model_path: /var/lib/vllm/models
+vllm_cache_path: /var/lib/vllm/cache
+vllm_config_dir: /etc/vllm
+vllm_data_dir: /var/lib/vllm
+vllm_log_dir: /var/log/vllm
+
+vllm_service_name: vllm
+vllm_service_enabled: true
+vllm_service_started: false
+
+# Lifecycle: recover from transient failures, then stop and surface the error.
+# Do not use Restart=always — that hides permanent misconfiguration.
+vllm_restart: on-failure
+vllm_restart_sec: 15
+vllm_start_limit_interval_sec: 300
+vllm_start_limit_burst: 3
+vllm_start_limit_action: none
+vllm_stop_timeout_sec: 45
+# Cap start time so a stuck image pull/model load surfaces as failed (seconds).
+vllm_timeout_start_sec: 3600
+
+# Fail the unit before pull/start if nvidia-smi is unhealthy (visible in systemctl).
+vllm_require_gpu_preflight: true
+vllm_preflight_script: /usr/local/sbin/vllm-preflight
+
+vllm_extra_args: []
+vllm_hf_token: ""
+
+vllm_env_file: /etc/vllm/vllm.env
+vllm_unit_path: /etc/systemd/system/vllm.service
+vllm_health_script: /usr/local/sbin/check-vllm-health
+vllm_health_timeout_sec: 5
+vllm_health_timer_enabled: true
+vllm_health_timer_on_boot_sec: "5min"
+vllm_health_timer_on_unit_active_sec: "1min"
+
+vllm_container_listen_host: "0.0.0.0"
+vllm_container_listen_port: 8000
+
+# Soft dependency when the package/unit exists on the host.
+vllm_after_nvidia_persistenced: true

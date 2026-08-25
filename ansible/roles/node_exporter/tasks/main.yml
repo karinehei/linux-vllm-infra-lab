@@ -1,0 +1,43 @@
+---
+- name: Ensure container runtime is available for node_exporter
+  ansible.builtin.assert:
+    that:
+      - container_runtime in ["podman", "docker"]
+    fail_msg: "node_exporter role requires container_runtime podman|docker"
+
+- name: Deploy node_exporter systemd unit
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart node_exporter
+
+- name: Enable and start node_exporter
+  ansible.builtin.systemd:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Open node_exporter port for trusted CIDRs
+  ansible.builtin.command: >-
+    firewall-cmd --permanent --add-rich-rule='rule family="ipv4"
+    source address="{{ item }}" port port="{{ node_exporter_port }}" protocol="tcp" accept'
+  loop: "{{ node_exporter_firewall_allow_cidrs }}"
+  register: node_exporter_fw
+  changed_when: >-
+    node_exporter_fw.rc == 0 and
+    ('already' not in (node_exporter_fw.stdout | default('') | lower)) and
+    ('already' not in (node_exporter_fw.stderr | default('') | lower))
+  failed_when: >-
+    node_exporter_fw.rc != 0 and
+    ('already' not in (node_exporter_fw.stdout | default('') | lower)) and
+    ('already' not in (node_exporter_fw.stderr | default('') | lower))
+  notify: Reload firewalld
+  when:
+    - security_firewall_enabled | default(true) | bool
+    - node_exporter_firewall_allow_cidrs | length > 0

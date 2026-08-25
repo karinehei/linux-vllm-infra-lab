@@ -1,0 +1,43 @@
+# Local / secrets — do not commit
+
+# Ansible
+ansible/**/*.retry
+ansible/inventory/group_vars/vault.yml
+ansible/inventory/group_vars/**/vault.yml
+*.vault
+.vault_pass
+
+# Env / credentials
+.env
+.env.*
+!.env.example
+**/vllm.env
+!**/vllm.env.example
+monitoring/.env
+**/credentials*
+**/*secret*
+
+# Python
+__pycache__/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Benchmark / test outputs
+benchmarks/results/
+tests/output/
+*.log
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Model weights (never vendor)
+**/models/
+*.safetensors
+*.bin
+*.gguf

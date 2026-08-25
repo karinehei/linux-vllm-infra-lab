@@ -1,0 +1,8 @@
+[Unit]
+Description=vLLM API health check
+After=vllm.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-{{ vllm_env_file }}
+ExecStart={{ vllm_health_script }} --wait 0

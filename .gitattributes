@@ -1,0 +1,9 @@
+# Keep POSIX LF in CI-sensitive text files (Bash/YAML/Python shebang scripts).
+* text=auto eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+*.j2 text eol=lf
+*.md text eol=lf
+*.json text eol=lf

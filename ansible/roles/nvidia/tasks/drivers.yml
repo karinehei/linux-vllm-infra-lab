@@ -1,0 +1,41 @@
+---
+# Opt-in path. Prefer pre-installing drivers from Rocky/NVIDIA docs for labs.
+
+- name: Warn before driver package installation
+  ansible.builtin.debug:
+    msg: >-
+      nvidia_install_drivers=true: installing driver packages. A reboot is
+      typically required. Ensure out-of-band/console access before proceeding
+      on physical hosts.
+
+- name: Enable NVIDIA CUDA network repository
+  when: nvidia_cuda_repo_enabled | bool
+  block:
+    - name: Install CUDA repo package prerequisites
+      ansible.builtin.dnf:
+        name:
+          - dnf-plugins-core
+        state: present
+
+    - name: Add CUDA repository for RHEL 9 compatible systems
+      ansible.builtin.yum_repository:
+        name: cuda-rhel9-x86_64
+        description: NVIDIA CUDA for RHEL 9
+        baseurl: "{{ nvidia_cuda_repo_baseurl }}"
+        gpgcheck: true
+        gpgkey: "{{ nvidia_cuda_repo_gpgkey }}"
+        enabled: true
+        file: cuda-rhel9
+
+- name: Install NVIDIA driver packages
+  ansible.builtin.dnf:
+    name: "{{ nvidia_driver_packages }}"
+    state: present
+    update_cache: true
+  notify: Advise NVIDIA driver reboot
+
+- name: Reminder when drivers were installed by Ansible
+  ansible.builtin.debug:
+    msg: >-
+      Driver packages changed or present. Reboot the host, verify nvidia-smi,
+      then re-run with nvidia_install_drivers: false for day-2 convergence.

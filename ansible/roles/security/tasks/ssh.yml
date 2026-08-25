@@ -1,0 +1,74 @@
+---
+- name: Resolve users allowed for SSH
+  ansible.builtin.set_fact:
+    security_ssh_allow_users_effective: >-
+      {{
+        (security_ssh_allow_users | default([]) | length > 0)
+        | ternary(
+            security_ssh_allow_users,
+            [ansible_user | default(ansible_user_id)]
+          )
+      }}
+
+- name: Ensure SSH package is installed
+  ansible.builtin.dnf:
+    name: openssh-server
+    state: present
+
+- name: Ensure sshd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Look up provisioning user passwd entry
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ansible_user | default(ansible_user_id) }}"
+  when:
+    - security_ssh_require_admin_key | bool
+    - not (security_ssh_password_authentication | bool)
+
+- name: Check that the Ansible connection user has an authorized key
+  ansible.builtin.stat:
+    path: "{{ getent_passwd[ansible_user | default(ansible_user_id)][5] }}/.ssh/authorized_keys"
+  register: security_admin_authorized_keys
+  when:
+    - security_ssh_require_admin_key | bool
+    - not (security_ssh_password_authentication | bool)
+
+- name: Refuse disabling password auth without an authorized_keys file
+  ansible.builtin.assert:
+    that:
+      - security_admin_authorized_keys.stat.exists | default(false)
+      - security_admin_authorized_keys.stat.size | default(0) | int > 0
+    fail_msg: >-
+      Refusing to set PasswordAuthentication no: no authorized_keys found for
+      {{ ansible_user | default(ansible_user_id) }}. Add an SSH public key first,
+      or set security_ssh_password_authentication: true for lab bootstrap only.
+  when:
+    - security_ssh_require_admin_key | bool
+    - not (security_ssh_password_authentication | bool)
+
+- name: Deploy SSH hardening drop-in
+  ansible.builtin.template:
+    src: 50-ai-lab-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/50-ai-lab-hardening.conf
+    owner: root
+    group: root
+    mode: "0600"
+  register: security_sshd_dropin
+  notify: Reload sshd
+
+- name: Validate full sshd configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  when: security_sshd_dropin is changed
+
+- name: Ensure sshd is enabled and started
+  ansible.builtin.service:
+    name: sshd
+    state: started
+    enabled: true

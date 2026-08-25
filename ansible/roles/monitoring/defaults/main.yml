@@ -1,0 +1,25 @@
+---
+# Role: monitoring — deploy lightweight Prometheus/Grafana stack on utility nodes.
+
+monitoring_enabled: true
+monitoring_install_dir: /opt/lab-monitoring
+monitoring_compose_project: vllm-lab-monitoring
+monitoring_prometheus_bind: "127.0.0.1"
+monitoring_grafana_bind: "127.0.0.1"
+monitoring_prometheus_port: 9090
+monitoring_grafana_port: 3000
+monitoring_grafana_admin_user: admin
+monitoring_grafana_admin_password: "lab-change-me"
+
+monitoring_scrape_vllm: true
+monitoring_scrape_node_exporter: true
+monitoring_scrape_dcgm: false
+
+# Default exporter ports on ai_nodes
+monitoring_node_exporter_port: 9100
+monitoring_dcgm_port: 9400
+monitoring_vllm_port: "{{ vllm_port | default(8000) }}"
+
+monitoring_prometheus_image: "prom/prometheus:v2.54.1"
+monitoring_grafana_image: "grafana/grafana:11.2.0"
+monitoring_blackbox_image: "quay.io/prometheus/blackbox-exporter:v0.25.0"

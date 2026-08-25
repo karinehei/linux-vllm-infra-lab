@@ -1,0 +1,15 @@
+{
+  "_comment": "EXAMPLE SCHEMA ONLY — not measured data. Zeros and placeholders are illustrative. Run benchmarks/benchmark_vllm.py against a live vLLM API to produce collected_measurement JSON under benchmarks/results/.",
+  "result_type": "example_schema",
+  "model": "...",
+  "gpu": "...",
+  "requests": 100,
+  "concurrency": 4,
+  "latency_ms": {
+    "p50": 0,
+    "p95": 0,
+    "p99": 0
+  },
+  "throughput_requests_per_second": 0,
+  "tokens_per_second": 0
+}

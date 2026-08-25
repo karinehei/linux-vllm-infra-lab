@@ -1,0 +1,62 @@
+# Lab compose file for Podman or Docker.
+# Default: bind localhost only — do not publish 0.0.0.0 without a firewall allowlist.
+#
+#   cp vllm.env.example vllm.env   # edit; never commit secrets
+#   podman compose -f compose.yml up -d
+#   # or: docker compose -f compose.yml up -d
+
+name: vllm-lab
+
+services:
+  vllm:
+    image: ${VLLM_CONTAINER_IMAGE:-vllm/vllm-openai:v0.6.3}
+    build:
+      context: .
+      dockerfile: Containerfile
+      args:
+        VLLM_BASE_IMAGE: ${VLLM_CONTAINER_IMAGE:-vllm/vllm-openai:v0.6.3}
+    container_name: vllm
+    restart: on-failure
+    env_file:
+      - path: vllm.env
+        required: false
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HUGGING_FACE_HUB_TOKEN:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /var/lib/vllm/cache
+      TRANSFORMERS_CACHE: /var/lib/vllm/cache/transformers
+      VLLM_CACHE_ROOT: /var/lib/vllm/cache/vllm
+    ports:
+      # Host bind defaults to 127.0.0.1 — set VLLM_HOST to a private NIC if needed
+      - "${VLLM_HOST:-127.0.0.1}:${VLLM_PORT:-8000}:8000"
+    volumes:
+      - ${VLLM_MODEL_PATH:-/var/lib/vllm/models}:/var/lib/vllm/models:ro
+      - ${VLLM_CACHE_PATH:-/var/lib/vllm/cache}:/var/lib/vllm/cache:rw
+    gpus: all
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      - --max-model-len
+      - ${VLLM_MAX_MODEL_LEN:-4096}
+      - --tensor-parallel-size
+      - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+      - --dtype
+      - ${VLLM_DTYPE:-auto}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s

@@ -1,0 +1,116 @@
+{#
+  systemd unit for containerized vLLM.
+  Design goals:
+  - enable → start on boot (WantedBy=multi-user.target)
+  - wait for network (+ container engine / optional nvidia-persistenced)
+  - Restart=on-failure with limited burst (do not mask permanent errors)
+  - logs to journald; status via systemctl
+  - no --privileged; unit hardening that still allows the container runtime
+#}
+[Unit]
+Description=vLLM OpenAI-compatible inference API
+Documentation=https://docs.vllm.ai/
+Documentation=file://{{ vllm_config_dir }}/vllm.json
+After=network-online.target
+Wants=network-online.target
+{% if container_runtime | default('podman') == 'docker' %}
+After=docker.service
+Requires=docker.service
+{% endif %}
+{% if vllm_after_nvidia_persistenced | default(true) | bool %}
+# Soft dependency: order after persistenced when present; do not fail if absent.
+After=nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+{% endif %}
+# Limited automatic recovery — after burst, unit stays failed for an admin.
+StartLimitIntervalSec={{ vllm_start_limit_interval_sec }}
+StartLimitBurst={{ vllm_start_limit_burst }}
+StartLimitAction={{ vllm_start_limit_action }}
+
+[Service]
+Type=simple
+EnvironmentFile=-{{ vllm_env_file }}
+
+# --- lifecycle ---
+Restart={{ vllm_restart }}
+RestartSec={{ vllm_restart_sec }}
+# Model download/load can be slow; fail eventually instead of hanging forever.
+TimeoutStartSec={{ vllm_timeout_start_sec }}
+TimeoutStopSec={{ vllm_stop_timeout_sec }}
+KillMode=mixed
+
+# --- journal visibility (systemctl status / journalctl -u vllm) ---
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vllm
+
+# --- least privilege (host unit wrapping a container runtime) ---
+# The runtime still needs privileges to configure namespaces/devices; we avoid
+# --privileged on the container and apply compatible unit hardening.
+PrivateTmp=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+# ReadWritePaths must cover cache (model downloads) and runtime state.
+{% if container_runtime | default('podman') == 'docker' %}
+ReadWritePaths={{ vllm_cache_path }} {{ vllm_log_dir }} /run /var/lib/docker /var/run/docker.sock
+{% else %}
+ReadWritePaths={{ vllm_cache_path }} {{ vllm_log_dir }} /run /var/lib/containers /run/containers
+{% endif %}
+
+# Preflight fails the unit loudly (no leading "-") when GPU/runtime is missing.
+ExecStartPre={{ vllm_preflight_script }}
+{% if container_runtime | default('podman') == 'podman' %}
+ExecStartPre=-/usr/bin/podman rm -f vllm
+ExecStart=/usr/bin/podman run --name vllm --rm \
+  --device nvidia.com/gpu=all \
+  --security-opt label=disable \
+  -p {{ vllm_host }}:{{ vllm_port }}:{{ vllm_container_listen_port }} \
+  -v {{ vllm_model_path }}:{{ vllm_model_path }}:ro \
+  -v {{ vllm_cache_path }}:{{ vllm_cache_path }}:rw \
+  -e HF_HOME={{ vllm_cache_path }} \
+  -e TRANSFORMERS_CACHE={{ vllm_cache_path }}/transformers \
+  -e VLLM_CACHE_ROOT={{ vllm_cache_path }}/vllm \
+  -e HUGGING_FACE_HUB_TOKEN \
+  -e HF_TOKEN \
+  {{ vllm_container_image }} \
+  --model {{ vllm_model }} \
+  --host {{ vllm_container_listen_host }} \
+  --port {{ vllm_container_listen_port }} \
+  --gpu-memory-utilization {{ vllm_gpu_memory_utilization }} \
+  --max-model-len {{ vllm_max_model_len }} \
+  --tensor-parallel-size {{ vllm_tensor_parallel_size }} \
+  --dtype {{ vllm_dtype }}{% for arg in vllm_extra_args %} \
+  {{ arg }}{% endfor %}
+ExecStop=/usr/bin/podman stop -t {{ vllm_stop_timeout_sec }} vllm
+{% else %}
+ExecStartPre=-/usr/bin/docker rm -f vllm
+ExecStart=/usr/bin/docker run --name vllm --rm \
+  --gpus all \
+  -p {{ vllm_host }}:{{ vllm_port }}:{{ vllm_container_listen_port }} \
+  -v {{ vllm_model_path }}:{{ vllm_model_path }}:ro \
+  -v {{ vllm_cache_path }}:{{ vllm_cache_path }}:rw \
+  -e HF_HOME={{ vllm_cache_path }} \
+  -e TRANSFORMERS_CACHE={{ vllm_cache_path }}/transformers \
+  -e VLLM_CACHE_ROOT={{ vllm_cache_path }}/vllm \
+  -e HUGGING_FACE_HUB_TOKEN \
+  -e HF_TOKEN \
+  {{ vllm_container_image }} \
+  --model {{ vllm_model }} \
+  --host {{ vllm_container_listen_host }} \
+  --port {{ vllm_container_listen_port }} \
+  --gpu-memory-utilization {{ vllm_gpu_memory_utilization }} \
+  --max-model-len {{ vllm_max_model_len }} \
+  --tensor-parallel-size {{ vllm_tensor_parallel_size }} \
+  --dtype {{ vllm_dtype }}{% for arg in vllm_extra_args %} \
+  {{ arg }}{% endfor %}
+ExecStop=/usr/bin/docker stop -t {{ vllm_stop_timeout_sec }} vllm
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+---
+- name: Validate container_runtime selection
+  ansible.builtin.assert:
+    that:
+      - container_runtime in ["podman", "docker"]
+    fail_msg: "container_runtime must be 'podman' or 'docker' (got '{{ container_runtime }}')."
+
+- name: Configure Podman
+  ansible.builtin.include_tasks: podman.yml
+  when: container_runtime == "podman"
+
+- name: Configure Docker Engine
+  ansible.builtin.include_tasks: docker.yml
+  when: container_runtime == "docker"

@@ -1,0 +1,53 @@
+# Example laboratory Slurm configuration (NOT production HA).
+# Install as slurm.conf after editing hostnames/IPs. Keep identical on all Slurm hosts.
+
+ClusterName=lab-hpc
+SlurmctldHost=controller
+
+#
+# Authentication / paths — adjust to your package layout
+#
+AuthType=auth/munge
+CryptoType=crypto/munge
+# Use linuxproc for a simple lab; switch to cgroup only with a working cgroup.conf.
+ProctrackType=proctrack/linuxproc
+ReturnToService=1
+SlurmctldPidFile=/var/run/slurmctld.pid
+SlurmdPidFile=/var/run/slurmd.pid
+SlurmdSpoolDir=/var/spool/slurmd
+StateSaveLocation=/var/spool/slurmctld
+SlurmUser=slurm
+# SlurmctldLogFile=/var/log/slurm/slurmctld.log
+# SlurmdLogFile=/var/log/slurm/slurmd.log
+
+#
+# Scheduling (simple lab defaults)
+#
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+SelectTypeParameters=CR_Core_Memory
+GresTypes=gpu
+
+#
+# Accounting — local state only for the lab (no slurmdbd)
+#
+AccountingStorageType=accounting_storage/none
+JobAcctGatherType=jobacct_gather/none
+
+#
+# Nodes
+# Real labs: set CPUs/RealMemory from `lscpu` / `free -m` on each host.
+#
+NodeName=compute01 CPUs=4 RealMemory=7800 State=UNKNOWN
+NodeName=gpu01     CPUs=8 RealMemory=15600 Gres=gpu:1 State=UNKNOWN
+
+#
+# Partitions
+#
+PartitionName=cpu Nodes=compute01 Default=YES MaxTime=1:00:00 State=UP
+PartitionName=gpu Nodes=gpu01     Default=NO  MaxTime=2:00:00 State=UP
+
+#
+# Optional: tree-wide defaults
+#
+DefMemPerCPU=1000

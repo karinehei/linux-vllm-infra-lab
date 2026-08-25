@@ -1,0 +1,29 @@
+[project]
+name = "research-ai-infrastructure-lab"
+version = "0.1.0"
+description = "Linux/AI infrastructure lab tooling"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["benchmarks/results", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = [".", "benchmarks", "scripts"]
+markers = [
+  "gpu: requires NVIDIA GPU and drivers on the host",
+  "integration: requires a running vLLM OpenAI-compatible API",
+  "benchmark: runs live inference load (GPU host)",
+]
+addopts = "-q --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]

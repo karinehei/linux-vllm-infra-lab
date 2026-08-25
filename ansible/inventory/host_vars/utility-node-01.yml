@@ -1,0 +1,9 @@
+---
+# Host-specific overrides for utility-node-01.
+
+common_manage_hostname: true
+common_hostname: utility-node-01
+
+# Example: keep package updates on by default from all.yml; override here if
+# this utility host should patch on a different cadence later.
+# common_update_packages: true

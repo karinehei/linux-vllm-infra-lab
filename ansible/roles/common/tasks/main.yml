@@ -1,0 +1,25 @@
+---
+- name: Include OS family tasks
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Read current timezone
+  ansible.builtin.command: timedatectl show -p Timezone --value
+  register: common_current_timezone
+  changed_when: false
+
+- name: Configure timezone
+  ansible.builtin.command:
+    cmd: timedatectl set-timezone {{ common_timezone }}
+  when: common_current_timezone.stdout != common_timezone
+  notify: Restart chronyd
+
+- name: Set hostname when requested
+  ansible.builtin.hostname:
+    name: "{{ common_hostname }}"
+  when: common_manage_hostname | bool
+
+- name: Ensure chronyd is enabled and started
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true

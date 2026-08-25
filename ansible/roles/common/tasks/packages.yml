@@ -1,0 +1,15 @@
+---
+- name: Update all packages
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    update_cache: true
+  when: common_update_packages | bool
+  register: common_dnf_update
+  changed_when: common_dnf_update is changed
+
+- name: Install essential administration packages
+  ansible.builtin.dnf:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true

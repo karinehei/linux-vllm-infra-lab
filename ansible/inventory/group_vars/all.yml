@@ -1,0 +1,27 @@
+---
+# Shared defaults for EVERY managed host (centralized baseline).
+
+project_name: research-ai-infrastructure-lab
+
+# --- common (consistent package / OS baseline) ---
+common_timezone: UTC
+common_update_packages: false
+common_manage_hostname: false
+
+# --- container_runtime ---
+# Prefer podman on Rocky/RHEL 9; override per group/host if needed.
+container_runtime: podman
+
+# --- security (applied to all nodes via site.yml) ---
+security_firewall_enabled: true
+security_ssh_hardening: true
+security_ssh_allow_cidrs: []
+security_ssh_allow_users: []
+security_ssh_permit_root_login: "prohibit-password"
+security_ssh_password_authentication: false
+
+# --- feature flags (group/host vars turn these on) ---
+nvidia_install_drivers: false
+nvidia_install_container_toolkit: false
+monitoring_enabled: false
+node_exporter_enabled: false

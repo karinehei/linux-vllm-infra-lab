@@ -1,0 +1,8 @@
+---
+# Ansible Vault example for AI nodes — copy to vault.yml and encrypt:
+#   cp ansible/inventory/group_vars/ai_nodes_vault.yml.example \
+#      ansible/inventory/group_vars/vault.yml
+#   ansible-vault encrypt ansible/inventory/group_vars/vault.yml
+
+vault_vllm_hf_token: "REPLACE_WITH_HUGGINGFACE_TOKEN"
+vault_monitoring_grafana_admin_password: "REPLACE_ME"

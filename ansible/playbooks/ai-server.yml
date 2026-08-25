@@ -1,0 +1,39 @@
+---
+# Convenience playbook: AI inference hosts only (same roles as site.yml ai_nodes play).
+#
+#   ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/ai-server.yml
+#
+# Prefer playbooks/site.yml for the full centrally managed environment.
+
+- name: Provision AI inference servers
+  hosts: ai_nodes
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require Rocky Linux / RHEL 9 family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+          - ansible_distribution_major_version | int == 9
+          - ansible_distribution in ["Rocky", "RedHat", "AlmaLinux", "CentOS", "OracleLinux"]
+        fail_msg: >-
+          This playbook targets Rocky Linux 9 / RHEL 9-compatible systems.
+          Found {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+  roles:
+    - role: common
+      tags: [common, bootstrap]
+    - role: users
+      tags: [users]
+    - role: security
+      tags: [security]
+    - role: container_runtime
+      tags: [containers, runtime]
+    - role: nvidia
+      tags: [nvidia, gpu]
+    - role: vllm
+      tags: [vllm, inference]
+    - role: node_exporter
+      tags: [monitoring, exporters]
+      when: node_exporter_enabled | default(false) | bool

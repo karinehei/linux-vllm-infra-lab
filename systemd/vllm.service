@@ -1,0 +1,50 @@
+# Reference: /etc/systemd/system/vllm.service
+#
+# Canonical template (values filled by Ansible):
+#   ansible/roles/vllm/templates/vllm.service.j2
+#
+# This file is a readable example of the lifecycle policy. Do not copy
+# placeholders to a host — deploy via Ansible so paths/models stay consistent.
+#
+# Enable for boot:  systemctl enable vllm
+# Day-2:            systemctl status|start|stop|restart vllm
+# Logs:             journalctl -u vllm [-f]
+
+[Unit]
+Description=vLLM OpenAI-compatible inference API
+Documentation=https://docs.vllm.ai/
+After=network-online.target
+Wants=network-online.target
+# After=docker.service / Requires=docker.service   # when container_runtime=docker
+# After=nvidia-persistenced.service
+# Wants=nvidia-persistenced.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+StartLimitAction=none
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/vllm/vllm.env
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=3600
+TimeoutStopSec=45
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vllm
+PrivateTmp=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+# ExecStartPre=/usr/local/sbin/vllm-preflight
+# ExecStart=podman|docker run ... (see Ansible template)
+# ExecStop=podman|docker stop ...
+
+[Install]
+WantedBy=multi-user.target

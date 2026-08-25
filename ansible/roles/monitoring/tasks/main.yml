@@ -1,0 +1,106 @@
+---
+- name: Ensure monitoring install directory exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ monitoring_install_dir }}"
+    - "{{ monitoring_install_dir }}/prometheus"
+    - "{{ monitoring_install_dir }}/prometheus/alerts"
+    - "{{ monitoring_install_dir }}/exporters"
+    - "{{ monitoring_install_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_install_dir }}/grafana/provisioning/dashboards"
+    - "{{ monitoring_install_dir }}/grafana/dashboards"
+
+- name: Deploy Prometheus scrape config from inventory (ai_nodes)
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_install_dir }}/prometheus/prometheus.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy Prometheus alert rules
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../monitoring/prometheus/alerts/lab-alerts.yml"
+    dest: "{{ monitoring_install_dir }}/prometheus/alerts/lab-alerts.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy blackbox exporter config
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../monitoring/exporters/blackbox.yml"
+    dest: "{{ monitoring_install_dir }}/exporters/blackbox.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy Grafana datasource provisioning
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../monitoring/grafana/provisioning/datasources/datasource.yml"
+    dest: "{{ monitoring_install_dir }}/grafana/provisioning/datasources/datasource.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy Grafana dashboard provider
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../monitoring/grafana/provisioning/dashboards/dashboards.yml"
+    dest: "{{ monitoring_install_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy Grafana lab overview dashboard
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../monitoring/grafana/dashboards/lab-overview.json"
+    dest: "{{ monitoring_install_dir }}/grafana/dashboards/lab-overview.json"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy monitoring compose file
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ monitoring_install_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart monitoring stack
+
+- name: Deploy monitoring env file
+  ansible.builtin.template:
+    src: monitoring.env.j2
+    dest: "{{ monitoring_install_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart monitoring stack
+
+- name: Deploy monitoring systemd unit
+  ansible.builtin.template:
+    src: lab-monitoring.service.j2
+    dest: /etc/systemd/system/lab-monitoring.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart monitoring stack
+
+- name: Enable and start lab-monitoring
+  ansible.builtin.systemd:
+    name: lab-monitoring
+    enabled: true
+    state: started
+    daemon_reload: true

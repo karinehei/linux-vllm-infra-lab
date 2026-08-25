@@ -1,0 +1,32 @@
+---
+# Group: monitoring_nodes — centralized metrics / admin utility hosts.
+
+monitoring_enabled: true
+node_exporter_enabled: true
+
+# No GPU toolkit on utility nodes by default
+nvidia_install_container_toolkit: false
+nvidia_install_drivers: false
+
+# Where compose/config are installed on the utility host
+monitoring_install_dir: /opt/lab-monitoring
+monitoring_compose_project: vllm-lab-monitoring
+
+# Scrape AI nodes over the lab network (override host addresses in inventory).
+# When vLLM binds to 127.0.0.1 only, use SSH tunnels or bind vllm_host to a
+# private NIC and list that address in host_vars for scrape targets.
+monitoring_scrape_vllm: true
+monitoring_scrape_node_exporter: true
+# DCGM scrape optional until a dcgm_exporter role is deployed on ai_nodes
+monitoring_scrape_dcgm: false
+
+# UI binds on the utility node (localhost by default — tunnel to view)
+monitoring_prometheus_bind: "127.0.0.1"
+monitoring_grafana_bind: "127.0.0.1"
+monitoring_prometheus_port: 9090
+monitoring_grafana_port: 3000
+
+# Prefer Vault in real labs:
+# monitoring_grafana_admin_password: "{{ vault_monitoring_grafana_admin_password }}"
+monitoring_grafana_admin_user: admin
+monitoring_grafana_admin_password: "{{ vault_monitoring_grafana_admin_password | default('lab-change-me') }}"
