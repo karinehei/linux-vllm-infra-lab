@@ -25,17 +25,21 @@ On the GPU host (or a small admin host that can reach exporters):
 
 ```bash
 cd monitoring
+cp .env.example .env   # set GRAFANA_ADMIN_PASSWORD (required)
 # edit prometheus/prometheus.yml targets if not localhost
 podman compose -f compose.yml up -d
 # or: docker compose -f compose.yml up -d
 ```
+
+Requires `podman compose version` (or Docker Compose v2). Prometheus scrapes
+Blackbox at Compose DNS `blackbox-exporter:9115`.
 
 Default UI binds (localhost only):
 
 | Service | URL |
 |---------|-----|
 | Prometheus | http://127.0.0.1:9090 |
-| Grafana | http://127.0.0.1:3000 (admin / see compose env) |
+| Grafana | http://127.0.0.1:3000 (password from `monitoring/.env`) |
 
 SSH tunnel from your laptop if needed:
 

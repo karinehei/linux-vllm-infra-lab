@@ -9,7 +9,9 @@ monitoring_grafana_bind: "127.0.0.1"
 monitoring_prometheus_port: 9090
 monitoring_grafana_port: 3000
 monitoring_grafana_admin_user: admin
-monitoring_grafana_admin_password: "lab-change-me"
+# Required at converge time via Vault / group_vars. Empty on purpose — do not
+# ship a published default password.
+monitoring_grafana_admin_password: ""
 
 monitoring_scrape_vllm: true
 monitoring_scrape_node_exporter: true
@@ -20,6 +22,17 @@ monitoring_node_exporter_port: 9100
 monitoring_dcgm_port: 9400
 monitoring_vllm_port: "{{ vllm_port | default(8000) }}"
 
+# Compose DNS name of the blackbox service (Prometheus container network).
+monitoring_blackbox_address: "blackbox-exporter:9115"
+
 monitoring_prometheus_image: "prom/prometheus:v2.54.1"
 monitoring_grafana_image: "grafana/grafana:11.2.0"
 monitoring_blackbox_image: "quay.io/prometheus/blackbox-exporter:v0.25.0"
+
+# Reject these if they appear as monitoring_grafana_admin_password.
+monitoring_grafana_disallowed_passwords:
+  - admin
+  - password
+  - changeme
+  - lab-change-me
+  - grafana

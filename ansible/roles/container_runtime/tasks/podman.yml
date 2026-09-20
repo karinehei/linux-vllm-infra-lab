@@ -14,6 +14,58 @@
   ansible.builtin.debug:
     msg: "{{ container_runtime_podman_version.stdout }}"
 
+- name: Install Compose provider packages for Podman
+  ansible.builtin.dnf:
+    name: "{{ container_runtime_podman_compose_packages }}"
+    state: present
+    update_cache: true
+  register: container_runtime_compose_install
+  ignore_errors: true
+  when: container_runtime_podman_install_compose | bool
+
+- name: Retry Compose provider install after enabling EPEL
+  when:
+    - container_runtime_podman_install_compose | bool
+    - container_runtime_podman_compose_use_epel | bool
+    - container_runtime_compose_install is failed
+  block:
+    - name: Ensure epel-release is installed
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+
+    - name: Install Compose provider from EPEL
+      ansible.builtin.dnf:
+        name: "{{ container_runtime_podman_compose_packages }}"
+        state: present
+        update_cache: true
+
+- name: Verify podman compose provider is callable
+  ansible.builtin.command: podman compose version
+  register: container_runtime_podman_compose_version
+  changed_when: false
+  failed_when: false
+  when: container_runtime_podman_install_compose | bool
+
+- name: Fail if Podman has no Compose provider
+  ansible.builtin.assert:
+    that:
+      - container_runtime_podman_compose_version.rc | default(1) | int == 0
+    fail_msg: >-
+      podman compose is not available. lab-monitoring.service and
+      monitoring/compose.yml require a Compose provider that implements
+      `podman compose`. Install podman-compose (often: dnf install epel-release
+      podman-compose) or another compatible provider, then re-run this role.
+      See docs/prerequisites.md and docs/monitoring.md.
+  when: container_runtime_podman_install_compose | bool
+
+- name: Display Podman Compose provider version
+  ansible.builtin.debug:
+    msg: "{{ container_runtime_podman_compose_version.stdout | default('') }}"
+  when:
+    - container_runtime_podman_install_compose | bool
+    - container_runtime_podman_compose_version.rc | default(1) | int == 0
+
 - name: Enable lingering for rootless Podman user services
   ansible.builtin.command: loginctl enable-linger {{ container_runtime_podman_linger_user }}
   register: container_runtime_linger

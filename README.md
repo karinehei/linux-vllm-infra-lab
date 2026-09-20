@@ -259,6 +259,7 @@ docs/           operations, security, testing, runbooks
 | [`docs/vllm.md`](docs/vllm.md) | Inference API and VRAM guidance |
 | [`docs/systemd-lifecycle.md`](docs/systemd-lifecycle.md) | Service failure modes |
 | [`docs/testing.md`](docs/testing.md) | Static CI vs GPU tests |
+| [`docs/deployment-validation.md`](docs/deployment-validation.md) | Practical validation procedure + results template |
 | [`docs/nvidia.md`](docs/nvidia.md) | GPU/driver flow |
 | [`ansible/README.md`](ansible/README.md) | Playbook usage |
 

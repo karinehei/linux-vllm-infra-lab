@@ -40,7 +40,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: YAML lint (yamllint)
-        run: yamllint -c .yamllint.yml ansible containers .github/workflows .yamllint.yml .ansible-lint
+        run: yamllint -c .yamllint.yml ansible containers monitoring .github/workflows .yamllint.yml .ansible-lint
 
       - name: Ansible syntax check
         run: |

@@ -38,7 +38,7 @@ install-dev: ## Install Python CI/dev deps (requirements-dev.txt)
 	python3 -m pip install -r requirements-dev.txt
 
 yaml-lint: ## yamllint (same paths as Static CI)
-	yamllint -c .yamllint.yml ansible containers .github/workflows .yamllint.yml .ansible-lint
+	yamllint -c .yamllint.yml ansible containers monitoring .github/workflows .yamllint.yml .ansible-lint
 
 ansible-syntax: ## ansible-playbook --syntax-check for site / ai / monitoring
 	$(ANSIBLE_PLAYBOOK) --syntax-check -i $(INVENTORY) $(SITE)

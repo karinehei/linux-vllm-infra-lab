@@ -17,6 +17,8 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus_data:/prometheus
+    depends_on:
+      - blackbox-exporter
 
   grafana:
     image: {{ monitoring_grafana_image }}

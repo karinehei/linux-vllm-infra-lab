@@ -26,7 +26,8 @@ monitoring_grafana_bind: "127.0.0.1"
 monitoring_prometheus_port: 9090
 monitoring_grafana_port: 3000
 
-# Prefer Vault in real labs:
-# monitoring_grafana_admin_password: "{{ vault_monitoring_grafana_admin_password }}"
+# Grafana admin password is required (no published default).
+# Copy ansible/inventory/group_vars/ai_nodes_vault.yml.example to vault.yml,
+# set vault_monitoring_grafana_admin_password, then encrypt with ansible-vault.
 monitoring_grafana_admin_user: admin
-monitoring_grafana_admin_password: "{{ vault_monitoring_grafana_admin_password | default('lab-change-me') }}"
+monitoring_grafana_admin_password: "{{ vault_monitoring_grafana_admin_password | default('') }}"

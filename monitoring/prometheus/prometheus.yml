@@ -1,6 +1,16 @@
 ---
 # Example Prometheus config for a single Rocky Linux GPU inference host.
 # Adjust targets if exporters or vLLM run on another address.
+#
+# Blackbox is reached via Compose DNS (blackbox-exporter:9115), not
+# 127.0.0.1:9115. From inside the Prometheus container, 127.0.0.1 is
+# Prometheus itself.
+#
+# Loopback scrape targets below assume this file is used with the
+# compose stack on the same host as vLLM/node_exporter. Prometheus still
+# cannot scrape host loopback; node_exporter/vLLM jobs succeed when those
+# processes listen on a reachable address (private NIC) or when you run
+# the Ansible-generated config on the utility node. See docs/monitoring.md.
 
 global:
   scrape_interval: 15s
@@ -54,4 +64,4 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: 127.0.0.1:9115
+        replacement: "blackbox-exporter:9115"

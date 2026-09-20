@@ -5,7 +5,9 @@
 security_firewall_enabled: true
 security_ssh_hardening: true
 
-# Always keep SSH open. Optional extra source CIDRs for SSH.
+# Always keep the firewalld 'ssh' service enabled (lockout avoidance).
+# security_ssh_allow_cidrs adds extra source allows; it does not restrict SSH
+# to those CIDRs. The drop-in does not change the sshd listen port.
 security_ssh_port: 22
 security_ssh_allow_cidrs: []
 

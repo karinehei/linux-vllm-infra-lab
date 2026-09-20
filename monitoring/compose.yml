@@ -1,7 +1,8 @@
 # Minimal monitoring stack for the research AI lab.
 # Binds Prometheus/Grafana to localhost — tunnel or private NIC for remote access.
 #
-#   cd monitoring && podman compose up -d
+#   cp .env.example .env   # set GRAFANA_ADMIN_PASSWORD (required)
+#   podman compose up -d   # needs a Compose provider (podman-compose / docker compose)
 #
 # DCGM exporter requires an NVIDIA GPU + drivers on this host.
 
@@ -23,14 +24,16 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus_data:/prometheus
+    depends_on:
+      - blackbox-exporter
 
   grafana:
     image: grafana/grafana:11.2.0
     container_name: lab-grafana
     restart: on-failure
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-lab-change-me}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in monitoring/.env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_HTTP_ADDR: 0.0.0.0
     ports:

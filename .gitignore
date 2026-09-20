@@ -16,6 +16,7 @@ ansible/inventory/group_vars/**/vault.yml
 monitoring/.env
 **/credentials*
 **/*secret*
+!docs/security/secrets.md
 
 # Python
 __pycache__/

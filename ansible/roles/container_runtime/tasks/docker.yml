@@ -32,3 +32,12 @@
 - name: Display Docker version
   ansible.builtin.debug:
     msg: "{{ container_runtime_docker_version.stdout }}"
+
+- name: Verify docker compose provider is callable
+  ansible.builtin.command: docker compose version
+  register: container_runtime_docker_compose_version
+  changed_when: false
+
+- name: Display Docker Compose version
+  ansible.builtin.debug:
+    msg: "{{ container_runtime_docker_compose_version.stdout }}"

@@ -7,6 +7,13 @@ common_hostname: ai-node-01
 # Example host-specific inference tuning (group default is 4096).
 vllm_max_model_len: 4096
 
-# Address Prometheus on utility-node-01 should use to reach this host.
-# Use a private NIC IP in real labs if vLLM/node_exporter listen there.
+# Address Prometheus on utility-node-01 should use to reach this host
+# (node_exporter). vLLM /metrics and /health are added only when vllm_host
+# is not loopback, or when monitoring_vllm_scrape_target is set.
 monitoring_scrape_ip: "{{ ansible_host }}"
+
+# Optional: bind the OpenAI API to this host's private NIC so the utility
+# node can scrape /health without publishing on all interfaces.
+# vllm_host: "{{ ansible_host }}"
+# vllm_firewall_allow_cidrs:
+#   - 192.0.2.20/32

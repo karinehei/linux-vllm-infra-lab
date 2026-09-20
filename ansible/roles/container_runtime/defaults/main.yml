@@ -14,6 +14,13 @@ container_runtime_podman_packages:
   - skopeo
   - containernetworking-plugins
 
+# lab-monitoring.service and monitoring/compose.yml need `podman compose`.
+# Rocky/RHEL 9 AppStream ships Podman but not always a Compose provider.
+container_runtime_podman_install_compose: true
+container_runtime_podman_compose_use_epel: true
+container_runtime_podman_compose_packages:
+  - podman-compose
+
 # Docker CE on Rocky 9 via Docker's official repo (not enabled unless selected).
 container_runtime_docker_edition: ce
 container_runtime_docker_packages:

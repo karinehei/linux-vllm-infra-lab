@@ -1,4 +1,20 @@
 ---
+- name: Require a non-default Grafana admin password
+  ansible.builtin.assert:
+    that:
+      - monitoring_grafana_admin_password | default('') | length > 0
+      - monitoring_grafana_admin_password not in (monitoring_grafana_disallowed_passwords | default([]))
+    fail_msg: >-
+      Set monitoring_grafana_admin_password from Ansible Vault
+      (vault_monitoring_grafana_admin_password). Empty values and published
+      lab defaults are rejected. See docs/security/secrets.md.
+
+- name: Require a working Compose provider for the selected runtime
+  ansible.builtin.command: "{{ container_runtime }} compose version"
+  register: monitoring_compose_provider
+  changed_when: false
+  failed_when: monitoring_compose_provider.rc != 0
+
 - name: Ensure monitoring install directory exists
   ansible.builtin.file:
     path: "{{ item }}"

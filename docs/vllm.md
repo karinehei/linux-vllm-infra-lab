@@ -95,6 +95,31 @@ Also:
 
 Default in this repo: **`Qwen/Qwen2.5-7B-Instruct`** (public, ~16 GB+ class card at 4k context).
 
+## Compatibility (pinned stack)
+
+Versions are pinned for a reproducible lab, not because they are the newest
+upstream. **Do not bump** `vllm_container_image` without checking the CUDA
+user-space in the image against the host driver.
+
+| Item | Lab pin | Notes |
+|------|---------|-------|
+| Image | `vllm/vllm-openai:v0.6.3` | Official OpenAI-compatible server; linux/amd64 CUDA image |
+| Model | `Qwen/Qwen2.5-7B-Instruct` | Supported by this vLLM series; public weights |
+| Host OS | Rocky / RHEL 9 | x86_64 |
+| Runtime | Podman (default) or Docker | GPU via NVIDIA Container Toolkit |
+| Podman GPU | `--device nvidia.com/gpu=all` | Requires CDI spec from `nvidia-ctk cdi generate` |
+| Docker GPU | `--gpus all` | Requires `nvidia-ctk runtime configure --runtime=docker` |
+| Driver | Operator-installed | Must satisfy the CUDA runtime **inside** the image (v0.6.3 is a CUDA 12.1 stack; typically driver ≥ 530). Confirm with `nvidia-smi` on the host before `systemctl start vllm` |
+| SELinux | Enforcing preferred | Unit uses `--security-opt label=disable` for GPU device access; this weakens confinement and is a documented lab trade-off |
+| `TRANSFORMERS_CACHE` | Still set | Deprecated in newer Hugging Face stacks; kept because v0.6.3 still honours it alongside `HF_HOME` |
+
+Incorrect assumptions to avoid:
+
+- The container image is not multi-arch (no ARM default).
+- `vllm_container_listen_host: 0.0.0.0` is **inside** the container; the host publish address remains `vllm_host` (default `127.0.0.1`).
+- A successful Ansible converge does not mean the API is up (`vllm_service_started` defaults to `false`).
+- Tensor parallel > 1 needs multiple visible GPUs; the default is `1`.
+
 Example overrides in `group_vars`:
 
 ```yaml

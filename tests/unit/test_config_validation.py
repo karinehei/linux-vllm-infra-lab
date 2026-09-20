@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -66,6 +67,8 @@ def test_required_repo_paths_exist() -> None:
         "benchmarks/benchmark_vllm.py",
         "docs/testing.md",
         "docs/multi-node.md",
+        "docs/deployment-validation.md",
+        "docs/security/secrets.md",
     ]
     missing = [p for p in required if not (ROOT / p).is_file()]
     assert not missing, f"missing required paths: {missing}"
@@ -97,6 +100,75 @@ def test_site_playbook_targets_expected_groups() -> None:
     assert "all" in hosts
     assert "ai_nodes" in hosts
     assert "monitoring_nodes" in hosts
+
+
+def test_prometheus_blackbox_uses_compose_dns() -> None:
+    standalone = (ROOT / "monitoring/prometheus/prometheus.yml").read_text(encoding="utf-8")
+    assert 'replacement: "blackbox-exporter:9115"' in standalone
+    assert "replacement: 127.0.0.1:9115" not in standalone
+    template = (ROOT / "ansible/roles/monitoring/templates/prometheus.yml.j2").read_text(
+        encoding="utf-8"
+    )
+    assert "monitoring_blackbox_address" in template
+    assert "replacement: 127.0.0.1:9115" not in template
+
+
+def test_grafana_password_is_not_hardcoded() -> None:
+    banned = "lab-change-me"
+    for rel in [
+        "ansible/inventory/group_vars/monitoring_nodes.yml",
+        "monitoring/compose.yml",
+        "monitoring/.env.example",
+    ]:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert banned not in text, f"{rel} still contains a published Grafana password"
+    defaults = yaml.safe_load(
+        (ROOT / "ansible/roles/monitoring/defaults/main.yml").read_text(encoding="utf-8")
+    )
+    assert defaults.get("monitoring_grafana_admin_password") in (None, "")
+    assert banned in (defaults.get("monitoring_grafana_disallowed_passwords") or [])
+    compose = (ROOT / "monitoring/compose.yml").read_text(encoding="utf-8")
+    assert "${GRAFANA_ADMIN_PASSWORD:?" in compose
+
+
+def test_podman_role_installs_and_validates_compose() -> None:
+    tasks = (ROOT / "ansible/roles/container_runtime/tasks/podman.yml").read_text(encoding="utf-8")
+    assert "podman compose version" in tasks
+    defaults = (ROOT / "ansible/roles/container_runtime/defaults/main.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "podman-compose" in defaults
+    unit = (ROOT / "ansible/roles/monitoring/templates/lab-monitoring.service.j2").read_text(
+        encoding="utf-8"
+    )
+    assert "ExecStartPre=/usr/bin/podman compose version" in unit
+
+
+def test_vllm_image_pin_unchanged_without_compat_change() -> None:
+    data = yaml.safe_load(
+        (ROOT / "ansible/inventory/group_vars/ai_nodes.yml").read_text(encoding="utf-8")
+    )
+    assert data.get("vllm_container_image") == "vllm/vllm-openai:v0.6.3"
+    assert data.get("vllm_model") == "Qwen/Qwen2.5-7B-Instruct"
+
+
+def test_markdown_internal_links_resolve() -> None:
+    link_re = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+    skip_parts = {".venv", "venv", "node_modules", ".git"}
+    missing: list[str] = []
+    for path in ROOT.rglob("*.md"):
+        if skip_parts.intersection(path.parts):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in link_re.finditer(text):
+            raw = match.group(1).strip()
+            target = raw.split()[0].split("#")[0]
+            if not target or target.startswith(("http://", "https://", "mailto:")):
+                continue
+            dest = (path.parent / target).resolve()
+            if not dest.exists():
+                missing.append(f"{path.relative_to(ROOT)} -> {target}")
+    assert not missing, "broken internal markdown links:\n" + "\n".join(missing)
 
 
 if __name__ == "__main__":

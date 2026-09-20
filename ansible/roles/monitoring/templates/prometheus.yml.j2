@@ -1,5 +1,13 @@
 ---
 # Prometheus config generated from Ansible inventory (centralized scrape targets).
+#
+# Blackbox is a Compose service on the same network as Prometheus.
+# Scrape it at {{ monitoring_blackbox_address }} — never 127.0.0.1:9115
+# (that is Prometheus's own container loopback).
+#
+# vLLM /health and /metrics are included only when the API bind is reachable
+# from this utility node (private NIC, not 127.0.0.1). Localhost-only binds
+# stay private; see docs/monitoring.md.
 
 global:
   scrape_interval: 15s
@@ -42,13 +50,31 @@ scrape_configs:
 {% endif %}
 
 {% if monitoring_scrape_vllm | bool %}
+{% set ns = namespace(vllm_entries=[]) %}
+{% for host in groups['ai_nodes'] | default([]) %}
+{% set bind = hostvars[host].vllm_host | default('127.0.0.1') %}
+{% set override = hostvars[host].monitoring_vllm_scrape_target | default('') %}
+{% if override | length > 0 %}
+{% set scrape_host = override %}
+{% elif bind in ['0.0.0.0', '::', '*'] %}
+{% set scrape_host = hostvars[host].monitoring_scrape_ip | default(hostvars[host].ansible_host) %}
+{% elif bind not in ['127.0.0.1', 'localhost', '::1'] %}
+{% set scrape_host = bind %}
+{% else %}
+{% set scrape_host = '' %}
+{% endif %}
+{% if scrape_host | length > 0 %}
+{% set ns.vllm_entries = ns.vllm_entries + [{'inventory': host, 'address': scrape_host, 'port': hostvars[host].vllm_port | default(monitoring_vllm_port)}] %}
+{% endif %}
+{% endfor %}
+{% if ns.vllm_entries | length > 0 %}
   - job_name: vllm
     metrics_path: /metrics
     static_configs:
-{% for host in groups['ai_nodes'] | default([]) %}
-      - targets: ["{{ hostvars[host].monitoring_scrape_ip | default(hostvars[host].ansible_host) }}:{{ hostvars[host].vllm_port | default(monitoring_vllm_port) }}"]
+{% for item in ns.vllm_entries %}
+      - targets: ["{{ item.address }}:{{ item.port }}"]
         labels:
-          host: "{{ host }}"
+          host: "{{ item.inventory }}"
           service: vllm
 {% endfor %}
 
@@ -57,11 +83,11 @@ scrape_configs:
     params:
       module: [http_2xx]
     static_configs:
-{% for host in groups['ai_nodes'] | default([]) %}
+{% for item in ns.vllm_entries %}
       - targets:
-          - "http://{{ hostvars[host].monitoring_scrape_ip | default(hostvars[host].ansible_host) }}:{{ hostvars[host].vllm_port | default(monitoring_vllm_port) }}/health"
+          - "http://{{ item.address }}:{{ item.port }}/health"
         labels:
-          host: "{{ host }}"
+          host: "{{ item.inventory }}"
           service: vllm
 {% endfor %}
     relabel_configs:
@@ -70,5 +96,6 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: 127.0.0.1:9115
+        replacement: "{{ monitoring_blackbox_address }}"
+{% endif %}
 {% endif %}

@@ -13,9 +13,12 @@ RemainAfterExit=yes
 WorkingDirectory={{ monitoring_install_dir }}
 EnvironmentFile=-{{ monitoring_install_dir }}/.env
 {% if container_runtime | default('podman') == 'podman' %}
+# Fail fast if Podman has no Compose provider (podman-compose or equivalent).
+ExecStartPre=/usr/bin/podman compose version
 ExecStart=/usr/bin/podman compose -f {{ monitoring_install_dir }}/compose.yml up -d
 ExecStop=/usr/bin/podman compose -f {{ monitoring_install_dir }}/compose.yml down
 {% else %}
+ExecStartPre=/usr/bin/docker compose version
 ExecStart=/usr/bin/docker compose -f {{ monitoring_install_dir }}/compose.yml up -d
 ExecStop=/usr/bin/docker compose -f {{ monitoring_install_dir }}/compose.yml down
 {% endif %}

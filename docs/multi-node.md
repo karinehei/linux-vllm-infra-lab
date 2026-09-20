@@ -60,14 +60,16 @@ By default vLLM binds to `127.0.0.1` (secure lab posture). Central Prometheus on
 1. `node_exporter` listens on a reachable address (`0.0.0.0` in the role default)
 2. `node_exporter_firewall_allow_cidrs` includes the utility host (see `group_vars/ai_nodes.yml`)
 
-To scrape vLLM `/health` or `/metrics` remotely, set on the AI host (host_vars or group_vars):
+To scrape vLLM `/health` or `/metrics` remotely, bind the **private NIC only**
+(not `0.0.0.0`) on the AI host. The generated Prometheus config **omits** vLLM
+jobs while `vllm_host` is loopback, so you do not get false `DOWN` targets:
 
 ```yaml
 vllm_host: "192.0.2.10"   # private NIC / ansible_host
 vllm_firewall_allow_cidrs: ["192.0.2.20/32"]  # utility-node-01
 ```
 
-Prometheus scrape targets are **generated from inventory** (`roles/monitoring/templates/prometheus.yml.j2`)—adding a host updates targets on the next converge.
+Prometheus scrape targets are **generated from inventory** (`roles/monitoring/templates/prometheus.yml.j2`)—adding a host updates targets on the next converge. Blackbox is scraped at Compose DNS `blackbox-exporter:9115`.
 
 ## Adding a third Linux server (no automation rewrite)
 

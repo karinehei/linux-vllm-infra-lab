@@ -40,7 +40,9 @@ Single GPU host is enough: keep one entry under `ai_nodes`. Add `monitoring_node
 
 ## 3. Optional: Ansible Vault
 
-Needed only if you use a Hugging Face token or non-default Grafana password.
+Needed only if you use a Hugging Face token or Grafana on monitoring nodes.
+The monitoring role **requires** `vault_monitoring_grafana_admin_password` (no
+published default).
 
 ```bash
 cp ansible/inventory/group_vars/ai_nodes_vault.yml.example \

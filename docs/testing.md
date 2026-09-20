@@ -23,8 +23,8 @@ Workflow: [`.github/workflows/static-ci.yml`](../.github/workflows/static-ci.yml
 
 Runs:
 
-1. **yamllint** — Ansible, compose, workflow YAML
-2. **ansible-playbook --syntax-check** — `ansible/playbooks/ai-server.yml`
+1. **yamllint** — Ansible, containers, monitoring, workflow YAML
+2. **ansible-playbook --syntax-check** — `site.yml`, `ai-server.yml`, `monitoring.yml`
 3. **ansible-lint** — playbook + roles
 4. **Ruff** — Python lint for `scripts/`, `benchmarks/`, `tests/`
 5. **ShellCheck** — operational Bash scripts
@@ -37,13 +37,11 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 sudo apt-get install -y shellcheck   # or brew install shellcheck
 
-yamllint -c .yamllint.yml ansible containers .github/workflows .yamllint.yml .ansible-lint
-ansible-playbook --syntax-check -i ansible/inventory/hosts.yml ansible/playbooks/ai-server.yml
-ansible-lint -c .ansible-lint ansible/playbooks/ai-server.yml ansible/roles
-ruff check scripts benchmarks tests
-shellcheck scripts/*.sh scripts/health/*.sh tests/integration/run_on_gpu_host.sh
-pytest tests/unit -v
+make check
 ```
+
+Host-side procedure and a results template (expected vs actual, no invented
+metrics): [`deployment-validation.md`](deployment-validation.md).
 
 ## Integration tests (GPU host)
 

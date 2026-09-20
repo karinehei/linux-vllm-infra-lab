@@ -7,6 +7,23 @@
 - Disk space for OS + container images + model weights / HF cache
 - Network: SSH from Ansible control node; API defaults to localhost (SSH tunnel for clients)
 
+## Container Compose provider (Podman)
+
+Rocky/RHEL 9 AppStream provides **Podman** but not always a working
+`podman compose` implementation. The monitoring stack
+(`lab-monitoring.service`, `monitoring/compose.yml`) requires a Compose
+provider:
+
+```bash
+podman compose version
+# or, if you selected Docker:
+docker compose version
+```
+
+The `container_runtime` role installs `podman-compose` (retrying via EPEL when
+needed) and **fails** if `podman compose` is still missing. Docker CE installs
+`docker-compose-plugin` and verifies `docker compose version`.
+
 ## Control node
 
 - Linux or WSL with Python 3.12+ recommended

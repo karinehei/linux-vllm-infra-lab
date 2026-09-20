@@ -22,7 +22,9 @@ node_exporter_enabled: true
 # Allow the utility/monitoring host to scrape node_exporter (edit to match inventory).
 node_exporter_firewall_allow_cidrs:
   - 192.0.2.20/32
-# For remote Prometheus health scrapes, bind vLLM to a private NIC and allow that CIDR:
+# Central Prometheus on utility-node-01 cannot scrape a localhost-only API.
+# Keep vllm_host at 127.0.0.1 unless you need remote /health and /metrics.
+# Then bind the private NIC only (not 0.0.0.0) and allow the utility CIDR:
 # vllm_host: "192.0.2.10"
 # vllm_firewall_allow_cidrs: ["192.0.2.20/32"]
 

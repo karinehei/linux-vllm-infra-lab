@@ -92,6 +92,7 @@ Findings from repository review (code, Ansible, containers, scripts, CI). Severi
 
 - No live passwords, private keys, or HF tokens committed.
 - Placeholders only (`REPLACE_WITH_HUGGINGFACE_TOKEN`, empty `HUGGING_FACE_HUB_TOKEN=` in examples).
+- Grafana admin password has **no published default**; the monitoring role rejects empty values and known lab passwords.
 - `.gitignore` excludes `vault.yml`, `vllm.env`, `.env`, weight files.
 
 **Residual:** Operators can still force-add secrets; examples must never be replaced with real values in git.
@@ -147,7 +148,7 @@ Risks:
 
 - Setting `vllm_host: 0.0.0.0` without CIDR controls exposes the API on all interfaces (Ansible warns).
 - Inside the container the process listens on `0.0.0.0`; safety depends entirely on the **host bind** and firewall.
-- Optional SSH CIDR rich rules do not remove the zone-level `ssh` allow by default (lockout avoidance).
+- Optional SSH CIDR rich rules do not remove the zone-level `ssh` allow by default (lockout avoidance). Ansible warns when CIDRs are set.
 
 ### 7. Filesystem permissions — Low–Medium (reasonable lab defaults)
 
